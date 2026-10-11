@@ -1,0 +1,17 @@
+{
+  "name": "digi-plugins",
+  "description": "SEO/GEO and operations routing plugins for Claude Code",
+  "owner": { "name": "ofirshudari1-ship-it" },
+  "plugins": [
+    {
+      "name": "digi-seo-ultimate",
+      "source": "./digi-seo-ultimate",
+      "description": "Unified SEO + GEO/AEO capability plugin (audit scripts, procedures, Hebrew/Wix/monitoring skills). Findings and drafts only."
+    },
+    {
+      "name": "digi-ops-ultimate",
+      "source": "./digi-ops-ultimate",
+      "description": "Routing pack of 13 non-SEO domain routers plus an index skill: one winner per capability."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "digi-seo-ultimate",
+  "version": "1.2.0",
+  "description": "Unified SEO + GEO/AEO capability plugin: one router skill, one lead agent plus six non-overlapping specialists, audit scripts, extension scripts, 26 procedures and original/adapted skills for Hebrew, Wix, AI-platform, monitoring and reporting work. Merges claude-seo 2.4.2 and ultimate-seo-geo 1.22.1 plus unique parts of geo-seo-claude and seo-geo-claude-skills. Provides findings and briefs only; the host project's SEO owner decides and executes.",
+  "author": {
+    "name": "ofirshudari1-ship-it"
+  },
+  "license": "MIT",
+  "keywords": ["seo", "geo", "aeo", "schema", "technical-seo", "e-e-a-t", "ai-search", "hebrew", "rtl", "wix"]
+}

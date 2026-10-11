@@ -1,0 +1,489 @@
+#!/usr/bin/env python3
+"""
+Content readability analysis — pure Python, no external NLP dependencies.
+
+Computes Flesch-Kincaid Reading Ease, grade level, sentence/paragraph stats.
+Accepts HTML file, plain text file, or stdin.
+
+Usage:
+    python readability.py page.html --json
+    python readability.py --url https://example.com --json
+    python readability.py --text "Your text here"
+    cat page.html | python readability.py --json
+"""
+
+import argparse
+import json
+import re
+import sys
+import urllib.request
+
+try:
+    from bs4 import BeautifulSoup
+    HAS_BS4 = True
+except ImportError:
+    HAS_BS4 = False
+
+
+def count_syllables(word: str) -> int:
+    """Count syllables in a word using heuristic rules."""
+    word = word.lower().strip()
+    if not word:
+        return 0
+    if len(word) <= 2:
+        return 1
+
+    # Remove trailing silent e
+    if word.endswith("e"):
+        word = word[:-1]
+
+    # Count vowel groups
+    vowels = "aeiouy"
+    count = 0
+    prev_vowel = False
+    for char in word:
+        is_vowel = char in vowels
+        if is_vowel and not prev_vowel:
+            count += 1
+        prev_vowel = is_vowel
+
+    return max(1, count)
+
+
+_BLOCK_TAGS = ["p", "div", "section", "article", "li", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6",
+               "blockquote", "table", "tr", "br", "pre", "figure", "figcaption", "details", "summary", "main"]
+
+
+def extract_text(html: str) -> str:
+    """Extract readable text from HTML, stripping scripts/styles."""
+    if HAS_BS4:
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in soup(["script", "style", "nav", "header", "footer", "aside"]):
+            tag.decompose()
+        # One blank line per block element: analyze() splits paragraphs on blank
+        # lines, and get_text() alone never emits one, so a whole page used to
+        # count as a single paragraph ("114 sentences per paragraph").
+        for tag in soup.find_all(_BLOCK_TAGS):
+            tag.insert_before("\n\n")
+            tag.insert_after("\n\n")
+        # No separator: inline tags (<a>, <strong>) must not put a space before a full stop.
+        lines = [re.sub(r"[ \t]+", " ", line).strip() for line in soup.get_text().split("\n")]
+        return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+    else:
+        # Basic fallback: strip tags
+        text = re.sub(r'<(script|style)[^>]*>.*?</\1>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r'<[^>]+>', '', text)
+        return text.strip()
+
+
+def split_sentences(text: str) -> list:
+    """Split text into sentences while preserving punctuation."""
+    chunks = re.split(r'(?<=[.!?])\s+', text.strip())
+    return [c.strip() for c in chunks if c.strip()]
+
+
+def suggest_sentence_rewrite(sentence: str) -> str:
+    """Suggest a shorter form of a long sentence.
+
+    Splits only where a sentence boundary is certain: after a semicolon or a
+    colon, or before a clause-level conjunction that follows a comma
+    (", but HTML paragraphs can ..."). Anywhere else a mechanical split breaks
+    the grammar: before "and" it cut noun phrases ("between the lead. A
+    salesperson"), at commas it cut lists ("including Sun Microsystems.
+    Cisco."), and after "that" it cut "described by that. Publisher". For those
+    sentences the suggestion says what to do instead of inventing a rewrite.
+    """
+    tokens = sentence.strip().split()
+    if len(tokens) <= 22:
+        return sentence.strip()
+
+    clause_conjunctions = {"but", "however", "although", "because", "whereas", "yet"}
+    not_a_clause = {"not", "also", "only", "rather", "then"}
+    min_side = 6
+    mid = len(tokens) // 2
+
+    # Each candidate is the index where the second sentence starts.
+    candidates = [i + 1 for i, tok in enumerate(tokens) if tok.endswith((";", ":"))]
+    candidates += [
+        i for i in range(1, len(tokens) - 1)
+        if tokens[i - 1].endswith(",")
+        and tokens[i].lower() in clause_conjunctions
+        and tokens[i + 1].strip(",;:").lower() not in not_a_clause
+    ]
+    lowered = [t.strip(",;:()").lower() for t in tokens]
+
+    def keeps_constructions_whole(i):
+        # "either ... or" is one construction: splitting between them left
+        # "It doesn't or (ii) the problem ..." on a posthog.com post.
+        return not ("either" in lowered[:i] and "or" in lowered[i:])
+
+    usable = [
+        i for i in candidates
+        if min_side <= i <= len(tokens) - min_side and keeps_constructions_whole(i)
+    ]
+    if not usable:
+        return (
+            f"Split this into two or three sentences of 15-20 words each "
+            f"(it has {len(tokens)})."
+        )
+    split_idx = min(usable, key=lambda i: abs(i - mid))
+
+    first_tokens = tokens[:split_idx]
+    second_tokens = tokens[split_idx:]
+    if second_tokens[0].strip(",;:").lower() in clause_conjunctions:
+        second_tokens = second_tokens[1:]
+
+    first = " ".join(first_tokens).rstrip(",;:.")
+    second = " ".join(second_tokens).lstrip(",;: ").rstrip(".!?")
+    first = first[0].upper() + first[1:]
+    second = second[0].upper() + second[1:]
+    return f"{first}. {second}."
+
+
+_FUNCTION_WORDS = frozenset(
+    "a an the and or but nor of to in on for with by at from as into about than "
+    "is are was were be been being am it its this that these those their them "
+    "they we you your our he she his her not no if then so such can will would "
+    "should may might must do does did have has had which who whom what when "
+    "where how all any each more most other some only own same very".split()
+)
+
+# A paragraph is prose that ends like a sentence. Headings, list labels, stat
+# cards and button text are blocks too, but counting them as paragraphs drove
+# sentences-per-paragraph towards zero (69 "paragraphs" at 0.5 sentences on a
+# 600-word guide) and hid real walls of text.
+_PARAGRAPH_MIN_WORDS = 8
+_SENTENCE_END_RE = re.compile(r'[.!?]["\'\u201d\u2019)\]]*$')
+
+
+def _is_paragraph(chunk: str) -> bool:
+    return (
+        len(re.findall(r"\b[a-zA-Z]+\b", chunk)) >= _PARAGRAPH_MIN_WORDS
+        and bool(_SENTENCE_END_RE.search(chunk.strip()))
+    )
+
+
+def _prose_sentence_count(chunk: str) -> int:
+    return sum(
+        1 for s in split_sentences(chunk) if len(re.findall(r"\b[a-zA-Z]+\b", s)) >= 4
+    )
+
+
+def is_navigation_noise(sentence: str) -> bool:
+    """Heuristic filter for nav/widget/template text that should not be rewritten."""
+    s = sentence.strip()
+    low = s.lower()
+    if not s:
+        return True
+
+    # Common homepage widget/navigation phrases
+    nav_phrases = [
+        "read more", "recent posts", "older posts", "subscribe to",
+        "comments (atom)", "labels", "search for a post", "widget",
+        "your browser does not support javascript",
+    ]
+    if any(p in low for p in nav_phrases):
+        return True
+
+    # Menu/list-like chunks with many line breaks are low-signal prose
+    if s.count("\n") >= 2:
+        return True
+
+    tokens = re.findall(r"\b[a-zA-Z]+\b", s)
+    if not tokens:
+        return True
+
+    # Keyword-list style content: almost no function words. Word uniqueness
+    # cannot tell the two apart; a real 30-word sentence repeats almost nothing
+    # (0.97 unique), so the old `unique_ratio > 0.85` test discarded exactly the
+    # long sentences worth rewriting.
+    function_share = sum(t.lower() in _FUNCTION_WORDS for t in tokens) / len(tokens)
+    if len(tokens) >= 25 and function_share < 0.15:
+        return True
+
+    return False
+
+
+# Below this many words a Flesch score says nothing about the page. The usual
+# cause is a JavaScript-rendered page whose raw HTML is an app shell: scoring
+# it Flesch 0 put an unmeasured check into the Health Score as a failure.
+MIN_WORDS_TO_MEASURE = 50
+
+
+def analyze_readability(text: str) -> dict:
+    """
+    Analyze text readability.
+
+    Returns:
+        Dictionary with readability metrics and assessment. When the text has
+        fewer than MIN_WORDS_TO_MEASURE words the result carries
+        ``measured: False`` and an ``error`` giving the reason, so the report
+        drops the check from the Health Score instead of scoring it 0.
+    """
+    result = _measure_readability(text)
+    words = result["word_count"]
+    if words < MIN_WORDS_TO_MEASURE:
+        reason = (
+            f"Readability not measured: only {words} word(s) of readable text in the page HTML "
+            f"(needs {MIN_WORDS_TO_MEASURE}). A JavaScript-rendered page ships its text after load; "
+            "re-run generate_report.py with --render auto to measure the rendered text."
+        )
+        result["measured"] = False
+        result["error"] = reason
+        # The difficulty notes were computed from too little text to mean anything.
+        result["issues"] = [f"ℹ️ {reason}"]
+        result["recommendations"] = []
+    else:
+        result["measured"] = True
+    return result
+
+
+def _measure_readability(text: str) -> dict:
+    """The raw readability metrics, however little text there is."""
+    result = {
+        "word_count": 0,
+        "sentence_count": 0,
+        "paragraph_count": 0,
+        "syllable_count": 0,
+        "avg_sentence_length": 0,
+        "avg_paragraph_length": 0,
+        "avg_syllables_per_word": 0,
+        "flesch_reading_ease": 0,
+        "flesch_kincaid_grade": 0,
+        "reading_level": "",
+        "estimated_reading_time_min": 0,
+        "complex_words": 0,
+        "complex_word_pct": 0,
+        "issues": [],
+        "recommendations": [],
+        "sentence_rewrites": [],
+    }
+
+    if not text or not text.strip():
+        result["issues"].append("🔴 No readable text content found")
+        return result
+
+    # Split into paragraphs: blocks of prose, not every block element
+    chunks = [p.strip() for p in re.split(r'\n\s*\n', text) if p.strip()]
+    paragraph_sentences = [max(1, _prose_sentence_count(c)) for c in chunks if _is_paragraph(c)]
+    result["paragraph_count"] = len(paragraph_sentences)
+
+    # Split into sentences
+    raw_sentences = split_sentences(text)
+    sentences = [
+        s.strip() for s in raw_sentences
+        if s.strip() and len(re.findall(r"\b[a-zA-Z]+\b", s)) >= 4
+    ]
+    result["sentence_count"] = max(1, len(sentences))
+
+    # Count words
+    words = re.findall(r'\b[a-zA-Z]+\b', text)
+    result["word_count"] = len(words)
+
+    if not words:
+        result["issues"].append("🔴 No words found in content")
+        return result
+
+    # Count syllables
+    syllables = sum(count_syllables(w) for w in words)
+    result["syllable_count"] = syllables
+
+    # Complex words (3+ syllables)
+    complex_words = [w for w in words if count_syllables(w) >= 3]
+    result["complex_words"] = len(complex_words)
+    result["complex_word_pct"] = round(len(complex_words) / len(words) * 100, 1)
+
+    # Averages
+    result["avg_sentence_length"] = round(len(words) / result["sentence_count"], 1)
+    result["avg_paragraph_length"] = round(
+        sum(paragraph_sentences) / max(1, len(paragraph_sentences)), 1
+    )
+    result["avg_syllables_per_word"] = round(syllables / len(words), 2)
+
+    # Flesch Reading Ease: 206.835 - 1.015*(words/sentences) - 84.6*(syllables/words)
+    wps = len(words) / result["sentence_count"]
+    spw = syllables / len(words)
+    fre = 206.835 - (1.015 * wps) - (84.6 * spw)
+    result["flesch_reading_ease"] = round(max(0, min(100, fre)), 1)
+
+    # Flesch-Kincaid Grade Level: 0.39*(words/sentences) + 11.8*(syllables/words) - 15.59
+    fkgl = (0.39 * wps) + (11.8 * spw) - 15.59
+    result["flesch_kincaid_grade"] = round(max(0, fkgl), 1)
+
+    # Reading level label
+    fre_val = result["flesch_reading_ease"]
+    if fre_val >= 80:
+        result["reading_level"] = "Easy (6th grade)"
+    elif fre_val >= 60:
+        result["reading_level"] = "Standard (7th-8th grade)"
+    elif fre_val >= 40:
+        result["reading_level"] = "Difficult (9th-12th grade)"
+    elif fre_val >= 20:
+        result["reading_level"] = "Very Difficult (college)"
+    else:
+        result["reading_level"] = "Extremely Difficult (post-graduate)"
+
+    # Reading time (avg 200 WPM)
+    result["estimated_reading_time_min"] = round(len(words) / 200, 1)
+
+    # Issues & recommendations
+    if result["avg_sentence_length"] > 25:
+        result["issues"].append(
+            f"⚠️ Average sentence length ({result['avg_sentence_length']} words) is too long — target 15-20"
+        )
+        result["recommendations"].append("Break long sentences into shorter ones for better readability")
+
+    if fre_val < 40:
+        result["issues"].append(
+            f"⚠️ Content is difficult to read (Flesch: {fre_val}) — may reduce engagement"
+        )
+        result["recommendations"].append("Simplify vocabulary and shorten sentences")
+    elif fre_val < 60:
+        result["issues"].append(
+            f"ℹ️ Content readability is moderate (Flesch: {fre_val}) — suitable for educated audience"
+        )
+
+    if result["complex_word_pct"] > 20:
+        result["issues"].append(
+            f"⚠️ {result['complex_word_pct']}% complex words (3+ syllables) — consider simplifying"
+        )
+
+    if result["paragraph_count"] > 0 and result["avg_paragraph_length"] > 5:
+        result["issues"].append(
+            f"⚠️ Average paragraph length ({result['avg_paragraph_length']} sentences) — aim for 2-4"
+        )
+        result["recommendations"].append("Break long paragraphs into smaller ones")
+
+    if result["word_count"] < 300:
+        result["issues"].append(f"⚠️ Thin content ({result['word_count']} words) — may rank poorly")
+
+    # Build concrete rewrite candidates for long sentences
+    long_sentences = []
+    for s in sentences:
+        wc = len(re.findall(r"\b[a-zA-Z]+\b", s))
+        if wc > 25:
+            long_sentences.append((wc, s))
+
+    long_sentences.sort(key=lambda x: x[0], reverse=True)
+    for wc, s in long_sentences[:5]:
+        if is_navigation_noise(s):
+            continue
+        result["sentence_rewrites"].append({
+            "current": s[:600],
+            "suggested": suggest_sentence_rewrite(s)[:600],
+            "current_word_count": wc,
+            "target_word_count": "15-20",
+        })
+        if len(result["sentence_rewrites"]) >= 3:
+            break
+
+    # Hard to read without any long sentence means the vocabulary is the
+    # problem, so point at the sentences carrying the most long words. This
+    # used to return two canned "homepage hero" rewrites whatever the page was,
+    # which put advice about a site's hero block on salary guides and articles.
+    if not result["sentence_rewrites"] and fre_val < 40:
+        dense = []
+        for s in sentences:
+            if is_navigation_noise(s):
+                continue
+            tokens = re.findall(r"\b[a-zA-Z]+\b", s)
+            long_words = list(dict.fromkeys(t for t in tokens if count_syllables(t) >= 3))
+            if len(long_words) >= 3:
+                dense.append((len(long_words), len(tokens), s, long_words))
+        dense.sort(key=lambda x: x[0], reverse=True)
+        for _, wc, s, long_words in dense[:3]:
+            result["sentence_rewrites"].append({
+                "current": s[:600],
+                "suggested": "Use shorter, everyday words for: " + ", ".join(long_words[:6]) + ".",
+                "current_word_count": wc,
+                "target_word_count": "same length, fewer 3+ syllable words",
+            })
+
+    if result["sentence_rewrites"]:
+        result["recommendations"].append(
+            "Rewrite the flagged long sentences below using the suggested replacements."
+        )
+
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Analyze content readability")
+    parser.add_argument("file", nargs="?", help="HTML or text file to analyze")
+    parser.add_argument("--url", "-u", help="Analyze content fetched from URL")
+    parser.add_argument("--text", "-t", help="Analyze text directly")
+    parser.add_argument("--json", "-j", action="store_true", help="Output as JSON")
+
+    args = parser.parse_args()
+
+    if args.text:
+        text = args.text
+    elif args.url:
+        try:
+            req = urllib.request.Request(
+                args.url,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; UltimateSEO/1.8)"},
+            )
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                content = resp.read().decode("utf-8", errors="ignore")
+            if "<html" in content.lower() or "<body" in content.lower():
+                text = extract_text(content)
+            else:
+                text = content
+        except Exception as exc:
+            parser.error(f"Failed to fetch URL: {exc}")
+            return
+    elif args.file:
+        with open(args.file, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        if "<html" in content.lower() or "<body" in content.lower():
+            text = extract_text(content)
+        else:
+            text = content
+    elif not sys.stdin.isatty():
+        content = sys.stdin.read()
+        if "<html" in content.lower() or "<body" in content.lower():
+            text = extract_text(content)
+        else:
+            text = content
+    else:
+        parser.error("Provide a file, --text, or pipe content via stdin")
+        return
+
+    result = analyze_readability(text)
+
+    if args.json:
+        print(json.dumps(result, indent=2))
+        return
+
+    print("Readability Analysis")
+    print("=" * 50)
+    print(f"Words: {result['word_count']} | Sentences: {result['sentence_count']} | "
+          f"Paragraphs: {result['paragraph_count']}")
+    print(f"Reading Time: ~{result['estimated_reading_time_min']} min")
+    print()
+    print(f"Flesch Reading Ease: {result['flesch_reading_ease']}/100 — {result['reading_level']}")
+    print(f"Flesch-Kincaid Grade: {result['flesch_kincaid_grade']}")
+    print(f"Avg Sentence Length: {result['avg_sentence_length']} words (target: 15-20)")
+    print(f"Avg Paragraph Length: {result['avg_paragraph_length']} sentences (target: 2-4)")
+    print(f"Complex Words (3+ syllables): {result['complex_words']} ({result['complex_word_pct']}%)")
+
+    if result["issues"]:
+        print(f"\nIssues:")
+        for issue in result["issues"]:
+            print(f"  {issue}")
+
+    if result["recommendations"]:
+        print(f"\nRecommendations:")
+        for rec in result["recommendations"]:
+            print(f"  💡 {rec}")
+
+    if result["sentence_rewrites"]:
+        print("\nSuggested sentence rewrites:")
+        for i, item in enumerate(result["sentence_rewrites"], 1):
+            print(f"  {i}. Current ({item['current_word_count']} words): {item['current']}")
+            print(f"     Suggested: {item['suggested']}")
+
+
+if __name__ == "__main__":
+    main()

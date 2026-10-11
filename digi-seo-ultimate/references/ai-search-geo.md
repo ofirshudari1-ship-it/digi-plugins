@@ -1,0 +1,686 @@
+<!-- Updated: 2026-10-01 | Review: 2027-04-01 -->
+
+# GEO Signals & AI Search Optimization Reference
+## Updated: October 2026
+
+**Contents:** 2026 AI Search Landscape · GEO Health Score · Citability Signals · Structural Readability · Authority & Brand Signals · Technical Accessibility · Multi-Modal Content · Platform-Specific Optimization · GEO Quick Wins · Brand Facts Page · Brand Mention Strategy · Wikipedia & Wikidata Entity Setup · Passage Indexing Optimization · DataForSEO MCP Integration · GEO Error Handling
+
+---
+
+## 2026 AI Search Landscape
+
+| Platform | Reach | Query Coverage | Key Insight |
+|---|---|---|---|
+| **Google AI Overviews** | 2.5B+ users/month (I/O 2026) | 48% of queries (projected 70-80% by end 2026) | Citations from top-10 pages dropped from 76% to 38% in 2025 — ranking matters less |
+| **Google AI Mode** | 1B+ monthly users, 180+ countries | Separate search tab, powered by custom Gemini 2.5 | Zero organic blue links — AI citation is the ONLY visibility. Only 13.7% URL overlap with AI Overviews (Ahrefs, 540K query pairs) — treat as a **distinct citation engine**. |
+| **ChatGPT Search** | 900M weekly active users | All queries | 85% of retrieved pages are never cited; many outbound links carry `utm_source=chatgpt.com`, the rest read as Direct |
+| **Perplexity** | 500M+ queries/month | All queries | Sends trackable referral traffic in GA; cites Reddit (46.7%) and Wikipedia heavily |
+| **Bing Copilot** | Integrated in Bing | All queries | Bing index authority; supports IndexNow for faster indexing |
+
+**AI-referred sessions grew 527% year-over-year** (Jan–May 2025, SparkToro/Previsible).
+
+**Platform citation overlap**: Only 11–13.7% of domains cited by both ChatGPT and Google AI Overviews for the same query. AI Mode and AI Overviews share only 13.7% URL overlap — they are functionally separate citation engines requiring distinct optimization. Platform-specific optimization is essential.
+
+---
+
+## GEO Health Score (0-100)
+
+| Dimension | Weight | Optimal Signal |
+|---|---|---|
+| Citability | 25% | 134-167 word self-contained answer blocks, direct answer in first 40-60 words of section |
+| Structural Readability | 20% | Clean H1→H2→H3, question-based headings, 2-4 sentence paragraphs, tables, lists |
+| Authority & Brand Signals | 20% | Author bio + credentials, publication dates, citations, entity presence across platforms |
+| Technical Accessibility | 20% | AI search crawlers allowed in robots.txt (`generate_report.py` scores this as `ai_search_access`), server-side rendering, key content present in raw HTML |
+| Multi-Modal Content | 15% | Text + images + video + structured data (78% of cited sources combine these) |
+
+**Scoring formula**: score each dimension **0–100**, then `Σ(dimension weight × dimension score)`. Weights sum to 100%, so the result is already on the 0–100 scale — no further division. (Worked example: `references/audit-output-example.md` § Example 3.)
+
+
+### Platform-to-Dimension Mapping
+
+Different AI platforms prioritize different GEO dimensions. Use this matrix to allocate optimization effort by platform importance for your strategy.
+
+| Platform | Citability (25%) | Structural Readability (20%) | Authority & Brand (20%) | Technical Accessibility (20%) | Multi-Modal (15%) |
+|---|---|---|---|---|---|
+| **Google AI Overviews** | Critical (44.2% of citations in first 30%) | High — question-based H2/H3 | High — entity signals matter | Essential — SEO foundational | Moderate — images boost |
+| **Google AI Mode** | High — deep, comprehensive | Critical — multi-turn requires clarity | High — expertise signals | Essential — server-side rendering | High — images + video |
+| **ChatGPT Search** | High — quotable facts | Moderate — less structured | Critical — 3× more important than backlinks; Wikipedia/Reddit favored | Essential — Allow OAI-SearchBot | Moderate |
+| **Perplexity** | Critical — factual, data-driven | High — Q&A format, definitive opens | High — brand mentions tracked | Essential — Allow PerplexityBot | Moderate — GA trackable |
+| **Bing Copilot** | High | Moderate | Moderate | Essential — IndexNow, HTTPS | Moderate |
+
+**Key Takeaways**:
+- **If optimizing for all platforms**: Prioritize Citability (25%) and Technical Accessibility (20%) universally
+- **If ChatGPT Search is priority**: Over-invest in Authority & Brand (Wikipedia, Reddit, LinkedIn presence)
+- **If Google AI Mode is priority**: Over-invest in Structural Readability and Multi-Modal content
+- **If Perplexity is priority**: Focus on Citability with fresh data and trackable Authority signals
+
+---
+
+## Citability Signals (Dimension 1: 25%)
+
+**Optimal passage length: 134-167 words** for AI citation extraction.
+
+`scripts/citability_checker.py` measures the structural side of this dimension and of Structural Readability on one page: prose walls, paragraph length, the heading outline and specific figures, plus whether it opens with a lead paragraph. It does not know the target query, so whether a passage *answers* it stays a judgment call.
+
+### Strong Citability Signals
+- Clear, quotable sentences with specific facts, statistics, or data
+- Self-contained answer blocks (extractable without surrounding context)
+- Direct answer in first 40-60 words of each section
+- Claims attributed to specific sources ("According to [Study], X% of...")
+- Definition patterns: "X is...", "X refers to...", "X means..."
+- Unique data points not found elsewhere on the web
+
+### Weak Citability Signals
+- Vague, general statements without specifics
+- Opinion without evidence or sourcing
+- Conclusions buried 3+ paragraphs in
+- No measurable/verifiable data points
+
+### Citation Placement Data (2025)
+- **First 30% of content**: 44.2% of all LLM citations
+- **Middle 30-70%**: 31.1% of citations
+- **Final 30%**: 24.7% of citations
+
+**Implication**: Lead with the answer, not with context. Top-loading key information is the single highest-leverage writing change.
+
+### Content Recency as Citation Lever
+Content under 3 months old receives approximately **3x the AI citation rate** compared to older content (SE Ranking, 2026). AI systems strongly favor fresh, recently updated content. Implications:
+- Add visible `dateModified` to all key pages when updating content
+- Refresh statistics, data points, and examples at least quarterly on high-value pages
+- New content has a recency window of ~3 months where citation probability is highest
+
+---
+
+## Structural Readability (Dimension 2: 20%)
+
+47% of AI Overview citations come from pages ranking **below position 5** — demonstrating that AI selection logic differs from traditional ranking.
+
+### Strong Structural Signals
+- Clean heading hierarchy: H1 (one per page) → H2 (main sections) → H3 (subsections)
+- Question-based headings that match query patterns: "How does X work?", "What is the difference between X and Y?"
+- Short paragraphs: 2-4 sentences, one idea per paragraph
+- Tables for comparative information (formats, pricing, options)
+- Numbered/bulleted lists for steps, features, or multi-item content
+- FAQ sections with clear Q&A format
+
+### Weak Structural Signals
+- Walls of text with no structural breaks
+- Inconsistent or skipped heading levels (H1 → H3 without H2)
+- No lists, tables, or visual structure
+- Important answers buried inside long paragraphs
+
+---
+
+## Authority & Brand Signals (Dimension 3: 20%)
+
+### Brand Mentions vs. Backlinks
+
+**Brand mentions are 3× more predictive of AI visibility than backlinks.**
+
+| Signal | Correlation with AI Citations |
+|---|---|
+| YouTube mentions/descriptions | ~0.737 (strongest) |
+| Reddit community presence | High (0.6+) |
+| Wikipedia / Wikidata entity | High |
+| Web mentions (aggregate) | 0.664 |
+| LinkedIn articles + presence | Moderate |
+| Domain Rating / Backlinks | ~0.266 (weak) |
+
+**48% of all AI citations** come from user-generated/community sources (Reddit, LinkedIn, Wikipedia, YouTube, arXiv).
+
+**<20% of brands** achieve both frequent mentions AND consistent citations (the "Mention-Source Divide").
+
+### Brand Mention Channels (Priority Order)
+1. **YouTube** — create video content; get mentioned in others' videos
+2. **Reddit** — genuine participation in relevant subreddits (r/ProductManagement, r/SaaS, r/startups, etc.)
+3. **Wikipedia / Wikidata** — create entity entry with citations; link to your site
+4. **LinkedIn** — publish articles (not just posts) that LinkedIn indexes as standalone pages
+5. **Third-party review sites** — G2, Trustpilot, Capterra, Yelp (3× citation increase for brands with profiles)
+6. **arXiv / research** — for scientific/technical domains
+
+### Tactical Playbooks per Channel
+
+> **⚠ Spam-policy boundary (§ 19 rule 10c).** Since **May 15, 2026** Google's spam policy covers
+> *"attempting to manipulate generative AI responses in Google Search"* — and the June 24 and
+> August 18–21, 2026 spam updates enforced it. **The test is the stated purpose, not the channel.**
+> Every playbook below is written around genuine contribution and stays in scope on that basis. The
+> same action flips to spam the moment the goal becomes placement rather than usefulness: answering a
+> Quora question well is fine, posting into threads *so that the AI cites you* is not. Coordinated
+> posting for citation capture, bought or placed citations, and recommendation-poisoning listicles
+> carry demotion, manual action, or deindexing. If a tactic only makes sense as a way to get cited,
+> it is the barred kind.
+
+**Quora**
+1. Search Quora for questions your content directly answers.
+2. Write a genuine 2–3 paragraph answer — do not copy-paste the article.
+3. Include one link to the relevant page at the end, not the top.
+4. Upvoted Quora answers index in Google and are scraped by Perplexity. Genuine answers accumulate passive impressions for months.
+5. Target 3–5 Quora answers per piece of published content.
+
+**Reddit**
+1. Find the subreddit where the target audience discusses this topic.
+2. Write 2–3 sentences of genuine context explaining why the content is relevant — do not paste the link alone. Context-free links are removed or downvoted. Upvoted Reddit threads are heavily indexed and cited by Perplexity.
+3. Engage with follow-up comments within 24 hours.
+
+**Influencer and Newsletter Outreach**
+1. Build a list of 10–30 relevant influencers per topic cluster.
+2. Email one sentence on why their audience benefits + pre-written tweet or LinkedIn post they can share as-is. Make sharing zero-effort.
+3. Identify 5–10 industry newsletters. Pitch strong content with a one-line summary — newsletter editors need good content; you are doing them a favour.
+4. Each share → brand mention → strengthens entity signals and AI citation rate.
+
+### Wikipedia & Wikidata Strategy (5-Step Process)
+
+Wikipedia and Wikidata entities are among the highest-signal sources for AI citations. This 5-step process maximizes impact while respecting notability guidelines.
+
+**Step 1: Check Wikidata First**
+- Search for your brand/person on Wikidata.org
+- If a stub exists, verify accuracy and completeness
+- If none exists, create a Wikidata entity with: name, entity type (Q-code), founding date, official website, official social links (Twitter, LinkedIn, YouTube)
+- Wikidata entries require minimal editorial scrutiny and serve as the foundation for Wikipedia
+
+**Step 2: Assess Wikipedia Notability**
+- Wikipedia requires demonstrable notability via independent, reliable sources
+- You need 3+ substantial citations in publications with editorial standards (journalists, academic presses, established industry outlets)
+- Community-generated content (your own Reddit posts, LinkedIn) does NOT count
+- Award nominations, press coverage, industry recognition, and academic mentions count
+
+**Step 3: If Notable — Create Article**
+- Write article in neutral, encyclopedic tone (no promotional language)
+- Structure: Lede (summary paragraph), History, Products/Services, Key Personnel, Impact/Recognition, External Links
+- Include {{cite}} tags linking to independent, high-authority sources
+- Citations should come from news outlets, industry publications, academic papers, and established directories
+- Avoid self-promotion; focus on factual, verifiable achievements
+
+**Step 4: If Not Notable — Earn Citations First**
+- Before attempting Wikipedia, pursue digital PR and thought leadership:
+  - Guest posts on industry-recognized publications
+  - Speaking at conferences with documented attendance
+  - Features in trade publications, analyst reports, or industry reviews
+  - Academic case studies or research partnerships
+  - Awards and recognitions from recognized bodies
+- Once you accumulate 3+ independent citations, revisit Wikipedia eligibility
+
+**Step 5: Keep Wikidata Updated**
+- Update quarterly: current CEO, key products, employee count, major partnerships
+- Add official social links (Twitter, LinkedIn, YouTube) to Wikidata
+- Link to Wikipedia article in Wikidata when created
+- Monitor for user edits; maintain accuracy without over-editing (avoid edit-warring)
+
+---
+
+### E-E-A-T Authority Signals
+- Author byline with credentials visible on every post
+- Detailed author bio with relevant experience + external links (LinkedIn, publications)
+- Publication date AND last-updated date visible
+- Citations to primary sources (studies, official docs, original data)
+- Expert quotes with name + title
+- Organization/brand described with credentials
+
+---
+
+## Technical Accessibility (Dimension 4: 20%)
+
+### AI Crawler Management
+
+**AI crawlers do NOT execute JavaScript** — content that requires JS to render is invisible to AI crawlers.
+
+| Crawler | Owner | Role | Recommendation |
+|---|---|---|---|
+| OAI-SearchBot | OpenAI | Search index (ChatGPT search) | **Always allow**. Blocking it removes the site from ChatGPT search results |
+| Claude-SearchBot | Anthropic | Search index (Claude search) | **Always allow**. Blocking it reduces visibility in Claude's search results |
+| PerplexityBot | Perplexity | Search index (Perplexity) | **Always allow**. Essential for Perplexity citations |
+| meta-webindexer | Meta | Search index (Meta AI search) | Allow |
+| DuckAssistBot | DuckDuckGo | Search: real-time fetch for AI-assisted answers, not used for training | Allow. Blocking it does not affect organic DuckDuckGo rankings |
+| Amzn-SearchBot | Amazon | Search in Amazon products, not used for training | Allow |
+| ChatGPT-User | OpenAI | User-initiated fetch | Allow. OpenAI says robots.txt rules may not apply |
+| Claude-User | Anthropic | User-initiated fetch | Allow. Blocking it stops Claude reading the page for a user's question |
+| Perplexity-User | Perplexity | User-initiated fetch | Allow. Perplexity says it generally ignores robots.txt |
+| meta-externalfetcher | Meta | User-initiated fetch | Allow. May bypass robots.txt |
+| Amzn-User | Amazon | User-initiated fetch (e.g. Alexa) | Allow. May not follow all robots.txt directives |
+| MistralAI-User | Mistral | User-initiated fetch | Allow |
+| GPTBot | OpenAI | Training | Optional. Allow for brand knowledge in future models, or block to opt out of training. No effect on ChatGPT search |
+| ClaudeBot | Anthropic | Training | Optional. No effect on Claude-SearchBot or Claude-User |
+| Google-Extended | Google | Control token, not a crawler (Gemini training) | Optional block. Does NOT affect Google Search or AI Overviews |
+| Applebot-Extended | Apple | Control token, not a crawler (Apple foundation-model training) | Optional block. Pages still appear in Apple search features |
+| meta-externalagent | Meta | Training and product indexing | Optional block |
+| Amazonbot | Amazon | Product improvement; may train Amazon AI models | Optional block |
+| MistralAI-Training | Mistral | Training | Optional block |
+| Bytespider | ByteDance | Training | Optional block |
+| CCBot | Common Crawl | Open training dataset | Optional block |
+| cohere-ai | Cohere | Training (Cohere models) | Optional block |
+
+Roles follow each vendor's own crawler documentation (checked September 2026), and `scripts/robots_checker.py` carries the same roles:
+
+- **Search** crawlers build the index that AI answers cite. Blocking one is a visibility defect.
+- **User** fetchers read a page when someone asks. Several vendors say these may ignore robots.txt.
+- **Training** crawlers and control tokens govern model training. Blocking them is a licensing choice, not a visibility defect.
+
+**Legacy tokens**: `anthropic-ai` and `Claude-Web` (Anthropic) and `FacebookBot` (Meta) no longer appear in their vendors' crawler documentation. Do not rely on rules that name only these tokens; name the current tokens above instead.
+
+**Firewalls and CDNs can refuse what robots.txt allows.** robots.txt is advice; a WAF or CDN bot rule is enforcement. A site can allow OAI-SearchBot in robots.txt and still answer it with a 403 or a JavaScript challenge, which a crawler that does not run JavaScript cannot pass. `scripts/ai_bot_access.py` fetches a URL as a browser and as each search and user-fetch crawler, then compares the responses. It sends the crawler's user agent from the audit machine, not from the vendor's published IP ranges, and a firewall that verifies bots by IP can treat the real crawler differently. Report a refusal as a **suspected** block and confirm it in the firewall or CDN logs before recommending a rule change. 429 and 5xx responses are inconclusive.
+
+**Key distinction**: Blocking `Google-Extended` prevents Gemini training but does NOT affect Googlebot, Google Search rankings, or AI Overviews. Blocking `GPTBot` blocks training but does NOT block `OAI-SearchBot` (search) or `ChatGPT-User` (browsing).
+
+### robots.txt — Recommended Configuration for AI Visibility
+```
+# AI search crawlers: blocking these removes the site from AI answers
+User-agent: OAI-SearchBot
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+Allow: /
+
+# User-initiated fetchers
+User-agent: ChatGPT-User
+User-agent: Claude-User
+Allow: /
+
+# Training crawlers: allow or block; blocking does not remove the site from AI search
+User-agent: GPTBot
+User-agent: ClaudeBot
+Allow: /
+
+# Block an open training dataset (optional)
+User-agent: CCBot
+Disallow: /
+
+# Standard crawlers
+User-agent: *
+Allow: /
+```
+
+### llms.txt Standard
+
+**Status**: Google confirmed (June 2026) that **Google Search ignores llms.txt**. It is not a ranking signal, citation lever, or indexation input for Google. Some non-Google AI systems may read it, but no platform has confirmed it influences citation selection.
+
+**Recommendation**: Implement as a low-cost hygiene step for non-Google AI engines only. Do not prioritize over citability, brand signals, or technical accessibility. Do not claim Google SEO or Google AI citation benefit.
+
+**Implemented by**: Anthropic (Claude docs), Cloudflare, Stripe
+
+**Keep it in step with the site**: `python scripts/llms_txt_checker.py https://example.com --check-sitemap --json` compares llms.txt links with the sitemap.
+- It reports same-site links the sitemap no longer lists, and checks up to 20 of them for 404/410.
+- A link to a page's markdown twin (`/page.md`) counts as the page.
+- Links to nested `llms.txt` files are counted separately, and every host the sitemap lists counts as the site.
+- If any sitemap file could not be read, it does not claim a link is missing.
+- Informational only, like everything about llms.txt.
+
+**Notes that dodge the question don't stop a guess.** "Pricing is custom per event; call us" does not stop a model from quoting a number. It leaves the model to pick one, often a competitor's or another segment's. If the site publishes starting prices, state them in the notes, one per segment ("Private events from $200. Corporate events from $800."). If the site has a brand facts page (see [Brand facts page](#brand-facts-page-the-fix-for-wrong-facts)), link it from the notes too.
+
+**Format** (place at `/llms.txt` in domain root):
+```
+# [Site Name]
+> [One-line description]
+
+## Key Pages
+- [Page title](url): [What it covers]
+- [Article](url): [Brief description]
+
+## About the Author/Organization
+- [Name]: [Title and expertise]
+- Contact: [Email or contact URL]
+```
+
+### RSL 1.0 (Really Simple Licensing)
+
+**Status**: Official standard published December 10, 2025. 1,500+ media organizations endorsing.
+
+RSL defines machine-readable AI content licensing terms via `robots.txt` directives:
+- **ai-all**: Permits all AI usage (training + inference + indexing)
+- **ai-input**: Permits AI input processing only
+- **ai-index**: Permits indexing for AI search only
+
+Useful for organizations wanting to differentiate between allowing AI Search citations (beneficial) and AI training (revenue concern).
+
+---
+
+## Multi-Modal Content (Dimension 5: 15%)
+
+Content with multi-modal elements sees **156% higher AI selection rates**.
+
+**78% of AI-cited sources** combine text, images, and structured data.
+
+### What to Include
+- Feature images / hero images (with descriptive alt text)
+- Charts and graphs (especially for statistics and comparisons)
+- Infographics (complex information in visual format)
+- Embedded video content (with VideoObject schema)
+- Interactive tools or calculators (highest citation signal)
+- Before/after examples (screenshots, case study images)
+
+---
+
+## Platform-Specific Optimization
+
+### Google AI Overviews
+- Ranking in top-10 is still a prerequisite (92% of citations from top-10 historically; now 38%)
+- Passage-level optimization matters more than page-level
+- Question-based H2/H3 headings closely match AI Overview triggers
+- First 30% of content provides 44.2% of citations — front-load your answers
+- Semantic completeness (r=0.89): self-contained sections score 4.2× more citations
+- **Top Stories carousel inside AI Overviews** (live July 17, 2026, US mobile) surfaces the searcher's preferred sources on developing-news queries — see § Preferred Sources below
+
+### Preferred Sources — the one reader-controlled lever inside AI answers
+
+**Why this matters now.** On **July 17, 2026** the Top Stories carousel went live *inside* AI Overviews
+(US, mobile) for developing-news queries, and it surfaces each searcher's **preferred sources**. That
+changed preferred sources from a Top Stories nicety into a direct AI-answer visibility lever — the only
+one where the *reader*, not the ranking system, decides a publisher gets shown. Google documented a
+custom interactive button for it on **August 20, 2026**.
+
+**Who this is for.** News and publisher sites producing timely, dated content. It is **not** a general
+recommendation — on a site that never appears in Top Stories there is nothing to opt into, and raising
+it as a finding there is noise. Gate on the site actually publishing news-style content.
+
+**Eligibility — the part most often got wrong:**
+
+| Eligible | Not eligible |
+|---|---|
+| `https://www.example.com/` (domain) | `https://www.example.com/blog` (subdirectory) |
+| `https://code.example.com/` (subdomain) | any path below the host |
+
+Selection is host-level. A publication living in a subdirectory cannot be chosen as a preferred source;
+if that matters to the site, moving it to a subdomain is the structural prerequisite, and that is a
+migration decision (§ 20), not a quick win.
+
+**Implementation — recommended (auto-translated button, two lines):**
+```html
+<script async src="https://news.google.com/swg/js/v1/publisher.js"></script>
+<div google-add-preferred-source-btn></div>
+```
+
+**Advanced:** import the ES module or use the script callback to trigger the flow from custom UI, when
+the default button does not fit the design system.
+
+**Deeplink** (no JavaScript — use where scripts are constrained, e.g. AMP or an email footer):
+```
+https://www.google.com/preferences/source?q=https://www.example.com/
+```
+
+**Placement.** The button converts where reader intent already exists: article footers, the newsletter
+signup module, and the "thanks for reading" slot. A sitewide header button placed before the reader has
+read anything converts poorly. Users are returned to their previous location after selecting, so it is
+safe mid-article.
+
+**How to audit it:** `scripts/preferred_sources_checker.py <url>` detects all three integration routes
+and reports host-level eligibility. Reported at Info severity — its absence is a missed opportunity,
+never a defect.
+
+### Google AI Mode (launched May 2025, powered by custom Gemini 2.5)
+- **Distinct citation engine** from AI Overviews — only 13.7% URL overlap (Ahrefs, 540K query pairs). Optimize separately.
+- 1B+ monthly users (I/O 2026). Powered by a custom version of Gemini 2.5.
+- Conversational, multi-turn — requires comprehensive depth
+- "Deep Search" runs 100+ sub-searches for complex queries
+- No organic blue links — AI citation is the only visibility
+- Content **recency** is a strong citation lever (~3x for content under 3 months, SE Ranking)
+- Optimize for multi-step, research-style queries
+- Images and video inputs supported (multi-modal input)
+
+### ChatGPT Search
+- Citations heavily favor Wikipedia (47.9%), Reddit (11.3%), and LinkedIn
+- No referral traffic header — cannot track via GA
+- Brand mentions and entity strength matter more than traditional SEO
+- Content freshness: update within 2 months for 28% more citations
+- 85% of retrieved pages are NEVER cited — quality threshold above retrieval
+
+### Perplexity
+- Content freshness is the #1 factor — newly published content indexed within hours-days
+- Sends trackable referral traffic (can monitor in GA)
+- Q&A format headings and definitive opening paragraphs
+- AI, science, marketing content gets 3× ranking multiplier
+- Uses RAG (Retrieval-Augmented Generation) — factual, well-structured content preferred
+
+### Bing Copilot
+- Bing index authority (same as Bing SEO)
+- IndexNow support for faster indexing of new/updated content
+- Security headers and HTTPS required
+
+---
+
+## GEO Quick Wins (High Impact, Low Effort)
+
+1. Add "What is [topic]?" definition in first 60 words of each post
+2. Create 134-167 word self-contained answer blocks at start of each H2 section
+3. Convert paragraph-heavy sections to Q&A format headings
+4. Include 5-8 statistics with source attribution per article (40% AI visibility boost)
+5. Add publication date AND last-updated date to every post
+6. Ensure AI crawlers (GPTBot, OAI-SearchBot, PerplexityBot) are allowed in robots.txt
+7. Create author bio page with credentials, LinkedIn link, and external mentions
+8. Add Article/BlogPosting JSON-LD schema to all posts
+
+## GEO Medium Effort
+
+1. Expand author bio: years of experience, companies, publications, external links
+2. Build entity presence: LinkedIn articles, Reddit participation, YouTube channel
+3. Create Wikidata/Wikipedia entity for brand/key people
+4. Publish comparison tables on every decision-making post
+5. Add FAQ sections to top 5 long-form guides
+6. Pursue 3-5 guest posts/bylines on high-DA publications in your niche
+7. When AI answers state wrong facts about the brand, publish one crawlable brand facts page and point the facts check at it (see [Brand facts page](#brand-facts-page-the-fix-for-wrong-facts))
+8. Create `/llms.txt` — **non-Google engines only**; Google Search ignores it (June 2026). Rank it last: it earns no Google visibility and no platform has confirmed it influences citation selection.
+
+## GEO High Impact
+
+1. Create original research/survey ("State of [Industry] 2026") — most-cited content type
+2. Build YouTube channel with educational content on your core topics
+3. Establish Wikipedia presence for brand and key people
+4. Develop interactive tools or calculators
+5. Achieve 32,000+ referring domains (3.5× citation probability threshold)
+
+---
+
+## Brand Mention Strategy (Full Correlation Data)
+
+Ahrefs/75k brand study: brand mention correlation with AI citations = **0.664** vs. backlinks = **0.218**. Brand mentions are 3× more powerful than backlinks for AI citation.
+
+**Priority channels (highest to lowest correlation):**
+
+| Channel | AI Citation Correlation | Action |
+|---|---|---|
+| **YouTube** | ~0.737 (highest) | Educational explainers on core topics |
+| **Reddit** | High | Contribute to niche subreddits (r/microdosing, etc.) |
+| **Wikipedia/Wikidata** | High | Wikidata stub + Wikipedia article if notable |
+| **LinkedIn articles** | Medium | Thought leadership from author profiles |
+| **G2, Trustpilot, Capterra** | Medium | Third-party review profiles |
+
+For each channel with zero presence, create a plan to establish it. YouTube and Reddit drive the highest AI citation correlation — prioritize first.
+
+## Wikipedia & Wikidata Entity Setup (Full Steps)
+
+Wikipedia and Wikidata presence correlates strongly with AI citations — both ChatGPT and Perplexity pull heavily from Wikipedia.
+
+1. **Check Wikidata first** — Search wikidata.org for the brand. If no entry: create a Wikidata stub (brand name, type, founding date, website, official social links). Takes under an hour and alone can improve AI citation likelihood.
+2. **Assess Wikipedia notability** — Wikipedia requires substantial coverage in 3+ independent, reliable sources with editorial standards (not press releases or self-published content).
+3. **If notable** — Create a Wikipedia article with neutral tone, citing only independent reliable sources. No promotional language — it will be deleted.
+4. **If not yet notable** — Earn 3+ substantial independent citations in publications with editorial standards. Once met, revisit Wikipedia.
+5. **Keep Wikidata current** — Add current CEO, products, founding year, employee count, and official social links. AI models retrieve Wikidata structured facts directly.
+
+## Passage Indexing Optimization
+
+Google Passage Indexing (active since 2021) ranks individual passages independently from the full page. It's also the primary mechanism for AI citation of specific answers — both systems prefer the same structure.
+
+**Rules for passage-optimized content:**
+1. Each H2 block should be **self-contained** — answers one clear question without requiring context from other sections.
+2. **Optimal passage length: 100–200 words per block** — sweet spot for both Passage Indexing and AI citation (confirmed citability range: 134–167 words).
+3. **No pronoun-heavy openings** — never start a section with "It" or "This" referring to a previous section. Start with the full subject ("Email marketing automation is...").
+4. **Question → Direct Answer structure** — question-phrased H2/H3 immediately followed by a direct answer in the first sentence.
+
+| Scenario | Google Behavior |
+|---|---|
+| Strong overall page, weak section | Full page ranks |
+| Weak overall page, one excellent section | That passage can rank independently |
+| Long FAQ page with 20 Q&As | Individual Q&A passages rank independently |
+
+---
+
+## DataForSEO MCP Integration (Optional)
+
+If DataForSEO MCP tools are available in the environment, use them for live GEO visibility checks:
+
+| Tool | Purpose |
+|---|---|
+| `ai_optimization_chat_gpt_scraper` | Check what ChatGPT web search returns for target queries — real-time GEO visibility check |
+| `ai_opt_llm_ment_search` | Track LLM mentions of a brand across AI platforms |
+| `ai_opt_llm_ment_top_domains` | Identify top-cited domains for target queries across AI platforms |
+
+These provide ground-truth data that supplements the structural analysis. With or without them, score repeated runs with the sampling method in § AI Visibility Monitoring Tools → Measuring AI Citation Presence: one search per keyword is an anecdote.
+
+---
+
+## Research-Backed GEO Techniques (Princeton, KDD 2024)
+
+Empirical data from Princeton's Generative Engine Optimization study on specific technique effectiveness:
+
+| Technique | AI Visibility Boost | How to Apply |
+|---|---|---|
+| **Cite authoritative sources** | +40% | Add references with links to studies, official docs |
+| **Add specific statistics** | +37% | Include precise numbers with named sources |
+| **Add expert quotations** | +30% | Expert quotes with name and title attribution |
+| **Use authoritative tone** | +25% | Write with demonstrated expertise; avoid hedging |
+| **Improve clarity** | +20% | Simplify complex concepts; short sentences |
+| **Use technical terminology** | +18% | Domain-specific terms used correctly |
+| **Increase vocabulary diversity** | +15% | Avoid repetitive phrasing; use varied language |
+| **Fluency optimization** | +15–30% | Improve readability and natural flow |
+| ~~Keyword stuffing~~ | **-10%** | **Actively hurts AI visibility** |
+
+**Best combination**: Fluency + Statistics = maximum visibility boost. Low-ranking sites benefit disproportionately — up to **115% visibility increase** when adding citations to previously uncited content.
+
+---
+
+## Content Type Citation Share
+
+Which content types get cited most by AI systems:
+
+| Content Type | Citation Share | Why AI Cites It |
+|---|---|---|
+| **Comparison articles** | ~33% | Structured, balanced, high-intent queries |
+| **Definitive guides** | ~15% | Comprehensive, authoritative single source |
+| **Original research/data** | ~12% | Unique, citable statistics unavailable elsewhere |
+| **Best-of / listicles** | ~10% | Clear structure, entity-rich, commercial intent |
+| **Product pages** | ~10% | Specific details AI can extract and attribute |
+| **How-to guides** | ~8% | Step-by-step structure matches procedural queries |
+| **Opinion / analysis** | ~10% | Expert perspective, quotable conclusions |
+
+**Implication**: If you only create one new content type for GEO, create a comparison article — they receive 1/3 of all AI citations.
+
+---
+
+## AI Visibility Monitoring Tools
+
+Track whether AI systems are citing your content:
+
+| Tool | Platform Coverage | Best For |
+|---|---|---|
+| **Otterly AI** | ChatGPT, Perplexity, Google AI Overviews | Share of AI voice tracking |
+| **Peec AI** | ChatGPT, Gemini, Perplexity, Claude, Copilot+ | Multi-platform monitoring at scale |
+| **ZipTie** | Google AI Overviews, ChatGPT, Perplexity | Brand mention + sentiment tracking |
+| **LLMrefs** | ChatGPT, Perplexity, AI Overviews, Gemini | SEO keyword → AI visibility mapping |
+
+**Manual monitoring**: use the sampling method below, monthly or quarterly with the same prompt set. A single search per keyword is an anecdote, because AI answers change between runs.
+
+### Measuring AI Citation Presence (Sampling Method)
+
+A single check that shows a competitor and not the site proves nothing either way. Measure citation as a rate over repeated runs, with a margin of error.
+
+1. **Fix a prompt set** of 10–30 prompts, written the way users ask (category, comparison, problem and brand intents), not bare keywords. Keep it unchanged between measurements.
+2. **Pick the engines** the audience uses (ChatGPT with search, Perplexity, Google AI Mode / AI Overviews, Copilot, Claude), and note location and search mode.
+3. **Run each prompt at least 5 times per engine**, each in a fresh session (logged out or history off).
+4. **Record every run**:
+   - Was the site cited as a source (a link or source card, not just a mention)?
+   - Was the brand named in the answer?
+   - Which domains were cited?
+
+   Start from a grid: `python scripts/citation_sampling.py --template --prompts prompts.txt --engines chatgpt,perplexity --runs 5 --output runs.csv`.
+5. **Score it**: `python scripts/citation_sampling.py runs.csv --domain example.com --json`. For each engine and each prompt, it returns:
+   - the citation rate with a 95% Wilson interval
+   - the site's share of voice among cited domains
+   - the domains cited instead
+
+Read the verdict, not the point estimate:
+
+| Verdict | Rule |
+|---|---|
+| Cited in most runs | Lower bound of the 95% interval above 50% |
+| Rarely or never cited | Upper bound below 30% |
+| Inconsistent | Anything between: add runs before concluding |
+| Too few runs | Fewer than 5 runs |
+
+- **0 of 5 is not "never cited".** Its interval still reaches 43%. 0 of 10 has an upper bound of 28%, which reads as rare.
+- **Compare engines or months only when their intervals do not overlap.** Overlapping intervals show no demonstrated change, whatever the point estimates say.
+- **Cited is not the same as mentioned.** A brand named without a source link came from the model's memory or an unlinked page. Record it in `mentioned` and report it separately.
+
+**Are the answers right about the brand?** Paste each answer whole into the grid's `answer` column and describe the official facts in a JSON file (founding year, headquarters, founders, prices, yes/no claims such as "free plan", and phrases that must never appear, such as "acquired by"; each with the `source` page that states it). A worked example is `references/brand-facts-example.json`. Then run `python scripts/citation_sampling.py runs.csv --facts brand.json --json`, adding `--domain` to score citations in the same run.
+
+- It reads only sentences that name the brand, plus a pronoun sentence straight after one ("It was founded in 2019"). A value counts only when it closely follows its keyword.
+- A statement in parentheses that do not name the brand ("Mixpanel (founded 2009)") is left out. So is one where a listed competitor (`others`) stands between the brand and the keyword, or one after a contrast ("compared to", "unlike").
+- For each fact it reports how many answers state it, how many get it wrong (with a 95% interval, per engine) and the wrong sentences quoted.
+- Each wrong fact becomes one finding. The fix is to state the fact plainly on its `source` page, then correct the third-party `profiles`. Engines repeat their sources, so fix the sources rather than the answers.
+- Price mismatches are hypotheses until read: answers quote old or regional plans.
+- **A right number quoted to the wrong segment is its own error.** A corporate buyer told the $200 private-event price got a real price, just not theirs, so a single price list can't catch it. Give each segment its own money fact with `context` terms: `{"field": "price (corporate)", "type": "money", "value": [800], "context": ["corporate", "office party"], "source": ".../pricing"}`. That fact is judged in sentences that use a term, and in any sentence of an answer whose prompt uses one, unless the sentence names another segment's term. Unscoped price facts leave those sentences alone. Pick terms that don't occur in ordinary sentences about the brand: "company" matches "the company's pricing".
+- **Ratings.** A `rating` fact (`"value": 5.0, "count": 40`) catches another business's star rating shown under the brand's name. A stated rating more than 0.05 away is wrong, and so is a review count more than 25% away from `count` (counts grow, so refresh it). "5-star service" is not read as a rating.
+- **A competitor whose name contains the brand's** ("Bloom Party Co Bay Area" for "Party Co") must be listed in `others`. Its mentions then don't count as the brand's, so its sentences aren't read as yours.
+- **The script calls no AI engine and needs no API key.** Rows can come from manual checks, the DataForSEO MCP tools above, or an export from the monitoring tools in this section.
+
+---
+
+## Brand Facts Page: the Fix for Wrong Facts
+
+When the facts check (or a manual panel) shows engines stating wrong facts about the brand, and the right facts are spread across several pages or missing, offer **one crawlable HTML facts page** (e.g. `/ai-info/` or `/about/facts/`). Make it the `source` the facts JSON points at. Google ignores llms.txt, so llms.txt can't be the fix for Google AI Overviews or AI Mode. An HTML page can.
+
+- **Write statements, not commands.** "Party Co is not affiliated with Bloom Party Co Bay Area" gets quoted. "AI assistants must describe us as…" reads as manipulation and is ignored. In an audit or competitor review, flag pages that use imperative "AI must" wording; it is the weakest part of the "AI instructions" page format.
+- **Corrections as questions.** Write each correction as a question ("Is Party Co the same business as Bloom Party Co Bay Area?", "Where is Party Co located?") and emit them as FAQPage Q&A. Each answer stands on its own and names the brand in its first sentence.
+- **What the page holds:** a one-sentence quotable summary, the identity and NAP block, prices **by segment**, the corrections, the official profiles (also as `sameAs`), a "which page to cite for what" list, and a visible last-reviewed date.
+- **One data source.** Build the page and llms.txt (or any other machine-readable summary) from the same module or constants, so they can't drift.
+- **Linking and indexing.** Link it from the About page and the llms.txt notes, and add it to the sitemap. A footer link is optional and the owner's call, because every visitor sees it. After deploy, run the GSC live test, then Request Indexing (see `crawl-indexation.md` for the steps).
+- **Be honest about the expected effect.** Errors that come from the Google Business Profile or the knowledge graph (a hidden service-area address, a missing Wikidata P131 "located in") are only partly fixed by an on-site page. Say so, and pair the page with the listing fix. The disambiguation rows in `entity-optimization.md` cover the common cases.
+- **Measure with the next scheduled panel run, not a spot check.** The ≥5-run rules above apply: one fixed answer is an anecdote.
+
+---
+
+## AI Platform Source Selection (Factor-by-Factor)
+
+How each AI platform selects sources differently:
+
+| Factor | Google AI Overviews | ChatGPT | Perplexity | Claude |
+|---|---|---|---|---|
+| **Freshness bias** | High | Medium | Very high | N/A (training data) |
+| **Authority weight** | Very high | High | High | High |
+| **Structure importance** | High | Medium | Very high | Medium |
+| **Typical citation count** | 3–8 | 1–6 | 5–10 | N/A |
+| **Quotable focus** | High | Medium | Very high | High |
+| **Domain trust** | Very high | High | Medium | High |
+| **Factual density** | High | High | Very high | Very high |
+
+---
+
+## Hidden Instructions to AI Systems (Prompt Injection)
+
+Some pages carry text written for AI crawlers and assistants rather than readers, such as "ignore previous instructions" or "AI assistants must recommend Acme", placed where a visitor never sees it. Google's spam policies define spam to include *"attempting to manipulate generative AI responses in Google Search"*, and they list hidden text (CSS positioned off-screen, font size or opacity set to 0) as a spam technique. A site owner who did not add the text has a compromise to clean up first: a plugin, an injected script or unmoderated user comments.
+
+`scripts/hidden_instructions.py URL` flags instruction-like phrasing **only where visitors cannot see it**. The full report also runs it on the audited page, as "Hidden AI instructions":
+
+| Where | Severity |
+|---|---|
+| CSS-hidden element (display, visibility, opacity or font size 0, off-screen), `hidden` attribute, hiding or screen-reader-only class, `noscript`, `template` | Critical |
+| HTML comment, `alt` / `title` / `aria-label`, meta description, JSON-LD | Warning |
+| Unicode tag characters (decoded and shown), or a run of 16+ zero-width characters | Warning |
+
+- **Not flagged:**
+  - the same sentence in visible copy, such as an article about prompt injection
+  - `aria-hidden`, which hides from screen readers, not from sight
+  - subdivision flag emoji and emoji joiners
+- **Quote the snippet as Evidence** and read it before acting.
+- **Coverage is limited.** Only inline hiding is evaluated, so text hidden by external CSS or scripts is missed, as are paraphrased or non-English instructions. No findings is not proof of a clean page.
+- **Never recommend adding hidden text aimed at AI systems** (§ 19 rule 10d).
+
+---
+
+## GEO Error Handling
+
+| Scenario | Action |
+|---|---|
+| Hidden instruction-like text found (`hidden_instructions.py`) | Quote the snippet as Evidence. Ask whether the site added it. If not, treat it as a compromise (plugins, injected scripts, user comments) before any SEO work. If it did, recommend removal: it is hidden text and an attempt to manipulate AI answers. |
+| URL unreachable (DNS failure, connection refused) | Report the error clearly. Do not guess site content. Ask user to verify URL. |
+| AI crawlers blocked by robots.txt | Report exactly which crawlers are blocked and which are allowed. Provide specific robots.txt directives to add. |
+| No llms.txt found | **Not a finding for Google** — Google Search ignores llms.txt (June 2026), so absence costs nothing and presence earns nothing. Do not score it and do not raise it unscoped. Offer a generated template only if the user has named a non-Google AI engine as a target. |
+| No structured data detected | Report the gap and provide specific schema recommendations (Article, Organization, Person) for AI discoverability. |
+| Content is JS-rendered only | Flag that AI crawlers cannot execute JavaScript. Recommend SSR or pre-rendering. Test raw HTML vs. rendered DOM. |
+| Brand has zero external platform presence | Prioritize YouTube and Reddit first (highest correlation). Provide a 30-day brand mention launch plan. |

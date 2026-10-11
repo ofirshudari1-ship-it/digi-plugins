@@ -1,0 +1,694 @@
+#!/usr/bin/env python3
+"""
+Analyze internal link structure of a website.
+
+Checks link count, anchor text distribution, broken and redirected internal
+pages, and link depth from homepage.
+
+It finds pages only by following links, so every page it knows about has at
+least one inbound link. It cannot detect orphan pages; link_profile.py compares
+the crawl against the sitemap for that.
+
+With --graph (a site_graph.py output) it also audits anchor text per
+destination page, from in-content links only, and flags vague anchors ("read
+more", "click here"). Header, nav, footer and breadcrumb links, and links
+repeating on 80% of pages, are left out: a navigation label repeated on every
+page is not an anchor problem. Each destination's anchor mix is reported, but a
+repeated anchor is never a finding: on real sites the most repeated anchors are
+template calls to action, and Google does not penalise repeated internal anchors.
+
+Usage:
+    python internal_links.py https://example.com
+    python internal_links.py https://example.com --depth 2 --json
+    python internal_links.py https://example.com --graph site_graph.json --json
+"""
+
+import argparse
+import json
+import re
+import sys
+from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urljoin, urlparse
+
+from url_safety import is_crawlable_href, is_refusal
+
+try:
+    import requests
+except ImportError:
+    print("Error: requests library required. Install with: pip install requests")
+    sys.exit(1)
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    print("Error: beautifulsoup4 required. Install with: pip install beautifulsoup4")
+    sys.exit(1)
+
+from site_graph import accessible_name  # noqa: E402  (needs bs4, checked above)
+
+
+HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; UltimateSEO/1.8)"}
+
+
+def _dedup_key(url: str) -> str:
+    """Slash-insensitive identity for a URL.
+
+    /gallery and /gallery/ are the same page for counting and de-duplication,
+    but only one of them is what the page actually linked to.
+    """
+    return url.rstrip("/") or url
+
+
+def extract_internal_links(html: str, page_url: str, domain: str) -> list:
+    """Extract internal links from HTML."""
+    soup = BeautifulSoup(html, "html.parser")
+    links = []
+    seen = set()
+
+    for tag in soup.find_all("a", href=True):
+        href = tag["href"].strip()
+        if not is_crawlable_href(href):
+            continue
+
+        absolute = urljoin(page_url, href)
+        parsed = urlparse(absolute)
+
+        # Only internal links
+        if parsed.netloc != domain:
+            continue
+
+        # Keep the href's own trailing slash. Stripping it made the crawler
+        # request a URL the page never linked to; a site that canonicalises to
+        # /path/ then 301s straight back, and that round trip — created by this
+        # script's own normalisation, not by the HTML — was reported as
+        # "internal link points to a redirect URL". De-duplication stays
+        # slash-insensitive so /gallery and /gallery/ still count once.
+        target = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+        if parsed.path == "":
+            target = f"{parsed.scheme}://{parsed.netloc}/"
+
+        key = _dedup_key(target)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        # The accessible name, not just visible text: a logo link named by its
+        # image's alt, or a card link carrying aria-label, has anchor text.
+        anchor_text = accessible_name(tag)[:80] or "[no text]"
+        nofollow = "nofollow" in (tag.get("rel", []) or [])
+        links.append({
+            "url": target,
+            "anchor_text": anchor_text,
+            "nofollow": nofollow,
+            "source": page_url,
+        })
+
+    return links
+
+
+def _issue(severity: str, finding: str, fix: str, evidence: str, confidence: str = "Confirmed") -> dict:
+    """A finding generate_report.py renders with its evidence and fix.
+
+    The wording stays what this script printed as a bare string before, so the
+    finding code generate_report.py derives from it, and --previous matching, do not change.
+    """
+    return {"severity": severity, "finding": finding, "evidence": evidence, "fix": fix, "confidence": confidence}
+
+
+def _linked_from(pages: list) -> str:
+    shown = "; ".join(f"{p['url']} (HTTP {p.get('status', '?')}, linked from {len(p.get('linked_from') or [])} page(s))"
+                      for p in pages[:5])
+    return shown + (f"; and {len(pages) - 5} more" if len(pages) > 5 else "")
+
+
+def crawl_site(start_url: str, max_depth: int = 2, max_pages: int = 50,
+               max_workers: int = 5, timeout: int = 10) -> dict:
+    """
+    Crawl internal links up to max_depth.
+
+    Args:
+        start_url: Starting URL (usually homepage)
+        max_depth: Maximum crawl depth
+        max_pages: Maximum pages to crawl
+        max_workers: Concurrent request threads
+        timeout: Per-page timeout
+
+    Returns:
+        Dictionary with link structure analysis
+    """
+    parsed = urlparse(start_url)
+    domain = parsed.netloc
+
+    result = {
+        "start_url": start_url,
+        "domain": domain,
+        "pages_crawled": 0,
+        "total_internal_links": 0,
+        "unique_pages_found": 0,
+        "max_depth_reached": 0,
+        "pages": {},
+        "anchor_texts": {},
+        "link_distribution": {},
+        "nofollow_links": [],
+        "broken_internal_pages": [],
+        "soft_404_pages": [],
+        "server_error_pages": [],
+        "redirected_pages": [],
+        "refused_pages": [],
+        "issues": [],
+        "recommendations": [],
+        "error": None,
+    }
+
+    SOFT_404_SIGNALS = [
+        "page not found", "404", "not found", "no longer available",
+        "does not exist", "page doesn't exist", "page has been removed",
+    ]
+
+    # BFS crawl
+    visited = set()
+    visited_keys = set()  # slash-insensitive, so /a and /a/ are not fetched twice
+    queue = [(start_url, 0)]  # (url, depth)
+    all_links = []
+    page_link_counts = {}
+    pages_linking_to = defaultdict(set)  # url -> set of pages linking to it
+    pages_found_at_depth = defaultdict(list)
+    broken_pages = {}  # url -> {"status": int, "linked_from": [urls]}
+    soft_404_pages = {}
+    server_error_pages = {}
+    refused_pages = {}  # 401 / 429 from the site itself: unverified, not broken
+    redirected_pages = {}  # url -> {"final_url": str, "linked_from": [urls]}
+
+    def fetch_page(url):
+        try:
+            resp = requests.get(url, timeout=timeout, headers=HEADERS, allow_redirects=True)
+            status = resp.status_code
+            content_type = resp.headers.get("content-type", "")
+            was_redirected = resp.url != url and resp.history
+
+            if status == 200 and "text/html" in content_type:
+                lower_body = resp.text[:5000].lower()
+                import re
+                title_match = re.search(r"<title[^>]*>(.*?)</title>", lower_body)
+                if title_match:
+                    title_text = title_match.group(1)
+                    for signal in SOFT_404_SIGNALS:
+                        if signal in title_text:
+                            return resp.text, resp.url, status, "soft_404", was_redirected
+                return resp.text, resp.url, status, "ok", was_redirected
+            return None, resp.url, status, "error", was_redirected
+        except requests.exceptions.RequestException:
+            return None, url, None, "error", False
+
+    while queue and len(visited) < max_pages:
+        batch = []
+        while queue and len(batch) < max_workers:
+            url, depth = queue.pop(0)
+            if _dedup_key(url) in visited_keys or depth > max_depth:
+                continue
+            visited_keys.add(_dedup_key(url))
+            visited.add(url)
+            batch.append((url, depth))
+
+        if not batch:
+            break
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(fetch_page, url): (url, depth) for url, depth in batch}
+            for future in as_completed(futures):
+                url, depth = futures[future]
+                html, final_url, status, page_status, was_redirected = future.result()
+
+                if is_refusal(status, internal=True):
+                    refused_pages[url] = {"status": status, "linked_from": []}
+                    continue
+                if status and 400 <= status < 500:
+                    broken_pages[url] = {"status": status, "linked_from": []}
+                    continue
+                elif status and status >= 500:
+                    server_error_pages[url] = {"status": status, "linked_from": []}
+                    continue
+                elif page_status == "soft_404":
+                    soft_404_pages[url] = {"linked_from": []}
+
+                if was_redirected and url != final_url:
+                    redirected_pages[url] = {"final_url": final_url, "linked_from": []}
+
+                if html is None:
+                    continue
+
+                links = extract_internal_links(html, final_url, domain)
+                page_link_counts[url] = len(links)
+                pages_found_at_depth[depth].append(url)
+                result["max_depth_reached"] = max(result["max_depth_reached"], depth)
+
+                for link in links:
+                    all_links.append(link)
+                    pages_linking_to[link["url"]].add(url)
+
+                    if link["url"] in broken_pages:
+                        broken_pages[link["url"]]["linked_from"].append(url)
+                    if link["url"] in soft_404_pages:
+                        soft_404_pages[link["url"]]["linked_from"].append(url)
+                    if link["url"] in server_error_pages:
+                        server_error_pages[link["url"]]["linked_from"].append(url)
+
+                    if link["nofollow"]:
+                        result["nofollow_links"].append(link)
+
+                    if _dedup_key(link["url"]) not in visited_keys and depth + 1 <= max_depth:
+                        queue.append((link["url"], depth + 1))
+
+    for link in all_links:
+        target = link["url"]
+        source = link["source"]
+        if target in broken_pages and source not in broken_pages[target]["linked_from"]:
+            broken_pages[target]["linked_from"].append(source)
+        if target in soft_404_pages and source not in soft_404_pages[target]["linked_from"]:
+            soft_404_pages[target]["linked_from"].append(source)
+        if target in refused_pages and source not in refused_pages[target]["linked_from"]:
+            refused_pages[target]["linked_from"].append(source)
+        if target in server_error_pages and source not in server_error_pages[target]["linked_from"]:
+            server_error_pages[target]["linked_from"].append(source)
+        if target in redirected_pages and source not in redirected_pages[target]["linked_from"]:
+            redirected_pages[target]["linked_from"].append(source)
+
+    result["broken_internal_pages"] = [
+        {"url": url, "status": info["status"], "linked_from": info["linked_from"][:5]}
+        for url, info in broken_pages.items()
+    ]
+    result["soft_404_pages"] = [
+        {"url": url, "linked_from": info["linked_from"][:5]}
+        for url, info in soft_404_pages.items()
+    ]
+    result["server_error_pages"] = [
+        {"url": url, "status": info["status"], "linked_from": info["linked_from"][:5]}
+        for url, info in server_error_pages.items()
+    ]
+    result["refused_pages"] = [
+        {"url": url, "status": info["status"], "linked_from": info["linked_from"][:5]}
+        for url, info in refused_pages.items()
+    ]
+    result["redirected_pages"] = [
+        {"url": url, "final_url": info["final_url"], "linked_from": info["linked_from"][:5]}
+        for url, info in redirected_pages.items()
+    ]
+
+    result["pages_crawled"] = len(visited)
+    result["total_internal_links"] = len(all_links)
+    result["unique_pages_found"] = len(pages_linking_to)
+
+    # Anchor text distribution
+    anchor_counter = Counter(link["anchor_text"] for link in all_links if link["anchor_text"] != "[no text]")
+    result["anchor_texts"] = dict(anchor_counter.most_common(20))
+
+    # Link distribution (outgoing links per page)
+    result["link_distribution"] = {
+        "min": min(page_link_counts.values()) if page_link_counts else 0,
+        "max": max(page_link_counts.values()) if page_link_counts else 0,
+        "avg": round(sum(page_link_counts.values()) / max(1, len(page_link_counts)), 1),
+    }
+
+    # Pages info
+    for url in visited:
+        outgoing = page_link_counts.get(url, 0)
+        incoming = len(pages_linking_to.get(url, set()))
+        result["pages"][url] = {
+            "outgoing_links": outgoing,
+            "incoming_links": incoming,
+        }
+
+    # Issues — broken/error pages first (highest severity)
+    if result["broken_internal_pages"]:
+        bp = result["broken_internal_pages"]
+        urls_preview = ", ".join(p["url"] for p in bp[:3])
+        result["issues"].append(_issue(
+            "critical", f"{len(bp)} internal page(s) return 404/4xx: {urls_preview}",
+            "301-redirect each moved page to its new URL, restore pages deleted by mistake, "
+            "and change the links that point at them.", _linked_from(bp)))
+
+    if result["server_error_pages"]:
+        sp = result["server_error_pages"]
+        urls_preview = ", ".join(p["url"] for p in sp[:3])
+        result["issues"].append(_issue(
+            "critical", f"{len(sp)} internal page(s) return 5xx server errors: {urls_preview}",
+            "Check the server logs for these URLs and fix the error; re-run to confirm it was not a transient outage.",
+            _linked_from(sp)))
+
+    if result["refused_pages"]:
+        # Not a page-list summary the score charges per page: an open question.
+        rf = result["refused_pages"]
+        result["issues"].append({
+            "severity": "info",
+            "kind": "data_gap",
+            "code": "internal_links.refused",
+            "finding": f"{len(rf)} internal page(s) could not be verified: the server refused the crawler",
+            "evidence": "; ".join(f"{p['url']} -> HTTP {p['status']}" for p in rf[:5])
+                        + (f"; and {len(rf) - 5} more" if len(rf) > 5 else ""),
+            "fix": "Open each in a browser. A login-gated page (401) refusing a crawler is expected; "
+                   "a 429 means this crawl was throttled, so re-run later or with a lower --max-pages.",
+            "confidence": "Confirmed",
+        })
+
+    if result["soft_404_pages"]:
+        sf = result["soft_404_pages"]
+        urls_preview = ", ".join(p["url"] for p in sf[:3])
+        result["issues"].append(_issue(
+            "medium", f"{len(sf)} internal page(s) are soft 404s (return 200 but show "
+            f"'not found' content): {urls_preview}",
+            "Return 404 or 410 for pages that no longer exist, or 301 them to the closest live page.",
+            _linked_from(sf), "Likely"))
+
+    if result["redirected_pages"]:
+        rp = result["redirected_pages"]
+        urls_preview = ", ".join(f"{p['url']} → {p['final_url']}" for p in rp[:2])
+        result["issues"].append(_issue(
+            "medium", f"{len(rp)} internal link(s) point to redirect URLs: {urls_preview}",
+            "Change each link to the final URL so it resolves in one request.",
+            "; ".join(f"{p['url']} -> {p['final_url']}" for p in rp[:5])
+            + (f"; and {len(rp) - 5} more" if len(rp) > 5 else "")))
+
+    low_link_pages = [url for url, count in page_link_counts.items() if count < 3]
+    if low_link_pages:
+        result["issues"].append(_issue(
+            "medium", f"{len(low_link_pages)} page(s) have fewer than 3 internal links",
+            "Link each of these pages to related pages in the body copy, where readers look for the next step.",
+            "; ".join(f"{u} ({page_link_counts[u]})" for u in low_link_pages[:5])
+            + (f"; and {len(low_link_pages) - 5} more" if len(low_link_pages) > 5 else "")))
+
+    high_link_pages = [url for url, count in page_link_counts.items() if count > 100]
+    if high_link_pages:
+        result["issues"].append(_issue(
+            "medium", f"{len(high_link_pages)} page(s) have >100 internal links — may dilute link equity",
+            "Trim repeated navigation and footer link blocks on these pages, and keep in-content links "
+            "to the pages that matter most.",
+            "; ".join(f"{u} ({page_link_counts[u]} links)" for u in high_link_pages[:5])
+            + (f"; and {len(high_link_pages) - 5} more" if len(high_link_pages) > 5 else ""), "Likely"))
+
+    if result["nofollow_links"]:
+        nf = result["nofollow_links"]
+        result["issues"].append(_issue(
+            "medium", f"{len(nf)} internal link(s) have nofollow — this wastes link equity",
+            "Remove rel=\"nofollow\" from links to your own pages; keep crawlers out of a page "
+            "with robots.txt or noindex instead.",
+            "; ".join(f"{l['source']} -> {l['url']}" for l in nf[:5])
+            + (f"; and {len(nf) - 5} more" if len(nf) > 5 else "")))
+
+    no_text = [l for l in all_links if l["anchor_text"] == "[no text]"]
+    if no_text:
+        result["issues"].append(_issue(
+            "medium", f"{len(no_text)} link(s) have no anchor text",
+            "Give each link visible text that names its target; for an icon or image link, "
+            "add an aria-label or the image's alt text.",
+            "; ".join(f"{l['source']} -> {l['url']}" for l in no_text[:5])
+            + (f"; and {len(no_text) - 5} more" if len(no_text) > 5 else "")))
+
+    # Recommendations
+    if result["broken_internal_pages"]:
+        result["recommendations"].append(
+            "Fix 404 internal pages: 301 redirect moved content, remove dead links, "
+            "or restore deleted pages. Each broken internal link wastes crawl budget "
+            "and breaks link equity flow."
+        )
+    if result["soft_404_pages"]:
+        result["recommendations"].append(
+            "Fix soft 404s: return a real 404/410 status code instead of 200 "
+            "for pages that show 'not found' content."
+        )
+    if result["redirected_pages"]:
+        result["recommendations"].append(
+            "Update internal links that point to redirect URLs. Link directly "
+            "to the final destination URL. GSC reports these as 'Page with "
+            "redirect' — stale links waste crawl budget and dilute link equity."
+        )
+    if result["link_distribution"]["avg"] < 5:
+        result["recommendations"].append(
+            "Increase internal linking — aim for 3-5 relevant links per 1000 words"
+        )
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Anchor audit (from a site_graph.py graph)
+# ---------------------------------------------------------------------------
+
+# Anchors that say nothing about the target. navigation_checker.py keeps the same
+# list for navigation labels; this one adds forms seen on real blog indexes.
+VAGUE_ANCHORS = frozenset({
+    "learn more", "click here", "read more", "here", "more", "link", "this", "see more", "view", "go",
+    "continue reading", "read full article", "find out more", "details", "more info", "click", "this page",
+    "view more", "keep reading", "read", "see details", "view details",
+})
+CHROME_REGIONS = frozenset({"nav", "header", "footer", "breadcrumb"})
+ANCHOR_MIN_PAGES = 5          # fewer fetched pages than this: not measured
+ANCHOR_LIST_LIMIT = 20
+
+
+def normalise_anchor(text: str) -> str:
+    """Lower case, punctuation and arrows dropped: "Read more »" and "read more" are one anchor."""
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s']", " ", (text or "").lower())).strip()
+
+
+def _path_words(url: str) -> set:
+    return {w for w in re.split(r"[/\-_.]+", urlparse(url).path.lower()) if w}
+
+
+def is_vague(anchor: str, target: str) -> bool:
+    """A generic anchor, unless its words are the target's own path words.
+
+    "Go" linking to /docs/installation/go names the Go language; "Go" linking
+    to /pricing names nothing. Seen on developers.cloudflare.com and posthog.com.
+    """
+    if anchor not in VAGUE_ANCHORS:
+        return False
+    return not set(anchor.split()) <= _path_words(target)
+
+
+def anchor_audit(graph: dict) -> dict:
+    """Anchor text per destination, from in-content internal links in a site graph.
+
+    Each (linking page, destination, anchor) counts once, however often the page
+    repeats the link. A link is in-content when its region and container are not
+    page chrome and it is not one of the links repeating on 80% of pages
+    (navigation_checker.global_links), which also catches footers built from
+    plain divs. Anchors are the link's accessible name (aria-label, aria-labelledby,
+    visible text, then image alt / SVG title), as site_graph records it; links
+    with none are counted as empty, not judged.
+    """
+    import navigation_checker  # lazy: only --graph needs the site-structure modules
+
+    pages = [p for p in (graph.get("pages") or {}).values() if p.get("out_links") is not None]
+    base = {"pages_sampled": len(pages), "method": (
+        "in-content internal links from the site graph; header/nav/footer/breadcrumb links and links on "
+        f">= {navigation_checker.GLOBAL_SHARE:.0%} of pages excluded; each linking page counts once per destination and anchor")}
+    if len(pages) < ANCHOR_MIN_PAGES:
+        return {**base, "status": "not measured",
+                "reason": f"{len(pages)} fetched page(s) in the graph; the audit needs {ANCHOR_MIN_PAGES}"}
+
+    repeating = navigation_checker.global_links(pages)
+    boilerplate = {s["key"] or s["href"] for s in repeating["repeating_unlabelled"]}
+    excluded = {"chrome": 0, "boilerplate": 0, "self": 0}
+    empty = 0
+    seen = set()
+    by_dest: dict = defaultdict(lambda: {"sources": set(), "anchors": Counter(), "vague": []})
+    for page in pages:
+        source = page.get("key") or page.get("url")
+        for link in page.get("out_links") or []:
+            if not link.get("internal") or not link.get("key"):
+                continue
+            if link.get("region") in CHROME_REGIONS or link.get("container") in ("header", "footer"):
+                excluded["chrome"] += 1
+                continue
+            if link["key"] in boilerplate:
+                excluded["boilerplate"] += 1
+                continue
+            if link["key"] == source:
+                excluded["self"] += 1
+                continue
+            anchor = normalise_anchor(link.get("anchor"))
+            if not anchor:
+                empty += 1
+                continue
+            ident = (source, link["key"], anchor)
+            if ident in seen:
+                continue
+            seen.add(ident)
+            dest = by_dest[link["key"]]
+            dest["sources"].add(source)
+            dest["anchors"][anchor] += 1
+            if is_vague(anchor, link["href"]):
+                dest["vague"].append({"source": page.get("url") or source, "target": link["href"], "anchor": link.get("anchor")})
+
+    destinations, vague_links, only_vague = [], [], []
+    for key, d in by_dest.items():
+        total = sum(d["anchors"].values())
+        top, top_count = d["anchors"].most_common(1)[0]
+        entry = {
+            "url": key, "linking_pages": len(d["sources"]), "content_links": total,
+            "distinct_anchors": len(d["anchors"]), "top_anchor": top, "top_anchor_share": round(top_count / total, 2),
+            "vague_links": len(d["vague"]),
+        }
+        destinations.append(entry)
+        vague_links.extend(d["vague"])
+        if d["vague"] and len(d["vague"]) == total:
+            only_vague.append(entry)
+    destinations.sort(key=lambda e: (-e["linking_pages"], e["url"]))
+    only_vague.sort(key=lambda e: (-e["vague_links"], e["url"]))
+    return {
+        **base,
+        "status": "measured",
+        "content_links": len(seen),
+        "destinations_count": len(destinations),
+        "excluded": {**excluded, "empty_anchor": empty},
+        "vague_links_count": len(vague_links),
+        "vague_links": vague_links[:ANCHOR_LIST_LIMIT],
+        "only_vague": only_vague[:ANCHOR_LIST_LIMIT],
+        "destinations": destinations[:ANCHOR_LIST_LIMIT],
+    }
+
+
+def anchor_issues(audit: dict) -> list:
+    """Findings from anchor_audit. Low only: _internal_links_score never charges low or info."""
+    issues = []
+    if audit.get("status") != "measured":
+        return issues
+    n = audit["pages_sampled"]
+    if audit["vague_links_count"]:
+        examples = "; ".join(f"'{v['anchor']}' on {v['source']} -> {v['target']}" for v in audit["vague_links"][:3])
+        blind = audit["only_vague"]
+        issues.append({
+            "severity": "low",
+            "code": "internal_links.vague_anchors",
+            "finding": (f"{audit['vague_links_count']} in-content internal link(s) use anchors that name nothing "
+                        f"(\"read more\", \"click here\") across {n} sampled pages"
+                        + (f"; {len(blind)} page(s) are reached only through such anchors in content" if blind else "") + "."),
+            "evidence": examples,
+            "impact": ("Google reads anchor text to understand the page it points to; a vague anchor gives it nothing, "
+                       "and screen-reader users hear the same label for different pages."),
+            "fix": ("Rewrite each anchor to say what the target is (\"read the pricing guide\", not \"read more\"). "
+                    "On card lists, put the link on the card's title instead of a trailing \"Read more\"."),
+            "confidence": "Confirmed",
+            "falsifiability": "Wrong if the vague links are named by text the graph cannot see (a label injected by JavaScript); aria-label, aria-labelledby and image alt are already read.",
+            "leading_indicator": "vague_links_count in the next run.",
+            "urls": [e["url"] for e in blind[:10]],
+            "lane": "Auto",
+        })
+    return issues
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Analyze internal link structure")
+    parser.add_argument("url", help="Website URL (usually homepage)")
+    parser.add_argument("--depth", "-d", type=int, default=2,
+                        help="Max crawl depth (default: 2)")
+    parser.add_argument("--max-pages", "-m", type=int, default=50,
+                        help="Max pages to crawl (default: 50)")
+    parser.add_argument("--graph", metavar="PATH",
+                        help="site_graph.py output: also audit anchor text per destination from in-content links")
+    parser.add_argument("--json", "-j", action="store_true", help="Output as JSON")
+
+    args = parser.parse_args()
+    graph = None
+    if args.graph:
+        import site_graph  # lazy: the plain crawl needs none of the site-structure modules
+        try:
+            graph = site_graph.load_graph(args.graph)
+        except (OSError, ValueError) as exc:
+            parser.error(f"--graph: {exc}")
+    result = crawl_site(args.url, max_depth=args.depth, max_pages=args.max_pages)
+    if graph is not None:
+        result["anchor_audit"] = anchor_audit(graph)
+        result["issues"].extend(anchor_issues(result["anchor_audit"]))
+
+    if args.json:
+        # Trim for readability
+        output = {k: v for k, v in result.items()}
+        # Convert sets to lists for JSON
+        for url, info in output.get("pages", {}).items():
+            if isinstance(info, set):
+                output["pages"][url] = list(info)
+        print(json.dumps(output, indent=2, default=str))
+        return
+
+    if result["error"]:
+        print(f"Error: {result['error']}")
+        sys.exit(1)
+
+    print(f"Internal Link Analysis — {result['domain']}")
+    print("=" * 50)
+    print(f"Pages crawled: {result['pages_crawled']}")
+    print(f"Unique pages found: {result['unique_pages_found']}")
+    print(f"Total internal links: {result['total_internal_links']}")
+    print(f"Max depth reached: {result['max_depth_reached']}")
+
+    dist = result["link_distribution"]
+    print(f"\nLinks per page: min={dist['min']}, max={dist['max']}, avg={dist['avg']}")
+
+    if result["broken_internal_pages"]:
+        print(f"\n🔴 Broken Internal Pages ({len(result['broken_internal_pages'])}):")
+        for bp in result["broken_internal_pages"][:10]:
+            print(f"  • [{bp['status']}] {bp['url']}")
+            for src in bp["linked_from"][:3]:
+                print(f"        ← linked from {src}")
+
+    if result["soft_404_pages"]:
+        print(f"\n⚠️ Soft 404 Pages ({len(result['soft_404_pages'])}):")
+        for sp in result["soft_404_pages"][:10]:
+            print(f"  • {sp['url']}")
+
+    if result["server_error_pages"]:
+        print(f"\n🔴 Server Error Pages ({len(result['server_error_pages'])}):")
+        for ep in result["server_error_pages"][:10]:
+            print(f"  • [{ep['status']}] {ep['url']}")
+
+    if result["refused_pages"]:
+        print(f"\nℹ️ Refused the crawler, not verified ({len(result['refused_pages'])}):")
+        for rp in result["refused_pages"][:10]:
+            print(f"  • [{rp['status']}] {rp['url']}")
+
+    if result["redirected_pages"]:
+        print(f"\n⚠️ Pages With Redirect ({len(result['redirected_pages'])}):")
+        for rp in result["redirected_pages"][:10]:
+            print(f"  • {rp['url']} → {rp['final_url']}")
+            for src in rp["linked_from"][:3]:
+                print(f"        ← linked from {src}")
+
+    if result["anchor_texts"]:
+        print(f"\nTop Anchor Texts:")
+        for text, count in list(result["anchor_texts"].items())[:10]:
+            print(f"  [{count}x] \"{text}\"")
+
+    if result["nofollow_links"]:
+        print(f"\n⚠️ Nofollow Internal Links ({len(result['nofollow_links'])}):")
+        for link in result["nofollow_links"][:5]:
+            print(f"  • {link['url']} (from {link['source']})")
+
+    audit = result.get("anchor_audit")
+    if audit:
+        if audit["status"] != "measured":
+            print(f"\nAnchor audit: not measured — {audit['reason']}")
+        else:
+            print(f"\nAnchor audit ({audit['pages_sampled']} pages, {audit['content_links']} in-content links; "
+                  f"excluded: {audit['excluded']}):")
+            print(f"  Vague anchors: {audit['vague_links_count']}")
+            for v in audit["vague_links"][:10]:
+                print(f"    '{v['anchor']}' on {v['source']} -> {v['target']}")
+            for d in audit["only_vague"][:10]:
+                print(f"  Only vague anchors reach {d['url']} ({d['vague_links']} link(s))")
+
+    if result["issues"]:
+        print(f"\nIssues:")
+        for issue in result["issues"]:
+            icon = {"critical": "🔴", "medium": "⚠️"}.get(issue.get("severity"), "ℹ️")
+            print(f"  {icon} {issue['finding']}")
+
+    if result["recommendations"]:
+        print(f"\nRecommendations:")
+        for rec in result["recommendations"]:
+            print(f"  💡 {rec}")
+
+
+if __name__ == "__main__":
+    main()

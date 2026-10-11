@@ -1,0 +1,11 @@
+# Core (needed by most scripts)
+requests>=2.31
+beautifulsoup4>=4.12
+lxml>=5.0
+# Optional
+playwright>=1.45        # render_page.py (JS-rendered pages); then: playwright install chromium
+google-api-python-client # GSC / GA4 scripts (google_auth.py)
+google-auth-oauthlib
+reportlab                # pdf_template.py / pdf_charts.py
+openpyxl                 # XLSX report format
+matplotlib               # pdf_charts.py

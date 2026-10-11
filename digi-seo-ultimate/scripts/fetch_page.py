@@ -1,0 +1,241 @@
+#!/usr/bin/env python3
+"""
+Fetch a web page with proper headers and error handling.
+
+Usage:
+    python fetch_page.py https://example.com
+    python fetch_page.py https://example.com --output page.html
+"""
+
+import argparse
+import codecs
+import re
+import sys
+from urllib.parse import urljoin
+
+try:
+    import requests
+except ImportError:
+    print("Error: requests library required. Install with: pip install requests")
+    sys.exit(1)
+
+from render_page import render_url, should_render
+from url_safety import validate_url
+
+
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; UltimateSEO/1.8; +https://github.com/mykpono/ultimate-seo-geo)",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate",
+    "Connection": "keep-alive",
+}
+
+
+_META_CHARSET_RE = re.compile(rb"""<meta[^>]+charset\s*=\s*["']?\s*([A-Za-z0-9_.:\-]+)""", re.I)
+
+
+def _meta_charset(body) -> str | None:
+    """The charset a page declares in a <meta> tag near its start, if it is a real codec."""
+    if not isinstance(body, (bytes, bytearray)):
+        return None
+    m = _META_CHARSET_RE.search(bytes(body[:4096]))
+    if not m:
+        return None
+    name = m.group(1).decode("ascii", "replace")
+    try:
+        codecs.lookup(name)
+    except LookupError:
+        return None
+    return name
+
+
+def _body_text(response) -> str:
+    """The response body as text, UTF-8 unless the page says otherwise.
+
+    requests falls back to ISO-8859-1 when Content-Type names no charset, which
+    garbles every non-ASCII title and throws off the length checks. Same rule
+    as site_graph.fetch_url: a charset in the header wins, then a <meta
+    charset>, then UTF-8.
+    """
+    headers = getattr(response, "headers", None) or {}
+    ctype = next((str(v) for k, v in headers.items() if str(k).lower() == "content-type"), "")
+    if "charset" not in ctype.lower():
+        response.encoding = _meta_charset(getattr(response, "content", None)) or "utf-8"
+    return response.text
+
+
+def render_fallback_warning(render_error: str) -> str:
+    """One-line warning for an auto-mode render that fell back to static HTML."""
+    first_line = (render_error or "").strip().splitlines()[0] if render_error else ""
+    if "not installed" in first_line:
+        return "render unavailable — using static HTML; run `pip install playwright && playwright install chromium`"
+    return (
+        "render unavailable — using static HTML; run `playwright install chromium`"
+        + (f" ({first_line})" if first_line else "")
+    )
+
+
+def fetch_page(
+    url: str,
+    timeout: int = 30,
+    follow_redirects: bool = True,
+    max_redirects: int = 5,
+    render: str = "never",
+) -> dict:
+    """
+    Fetch a web page and return response details.
+
+    Args:
+        url: The URL to fetch
+        timeout: Request timeout in seconds
+        follow_redirects: Whether to follow redirects
+        max_redirects: Maximum number of redirects to follow
+
+    Returns:
+        Dictionary with:
+            - url: Final URL after redirects
+            - status_code: HTTP status code
+            - content: Response body
+            - headers: Response headers
+            - redirect_chain: List of redirect URLs
+            - rendered: Whether Playwright rendering supplied the content
+            - render_error: Why rendering failed when render="auto" fell back
+              to the static HTML (content is still the static response)
+            - error: Error message if failed
+    """
+    result = {
+        "url": url,
+        "status_code": None,
+        "content": None,
+        "headers": {},
+        "redirect_chain": [],
+        "rendered": False,
+        "render_mode": render,
+        "render_error": None,
+        "error": None,
+    }
+
+    if render not in {"never", "auto", "always"}:
+        result["error"] = f"Invalid render mode: {render}"
+        return result
+
+    safe = validate_url(url)
+    if not safe.ok:
+        result["error"] = f"URL safety check failed: {safe.reason}"
+        return result
+
+    current_url = safe.normalized_url
+
+    try:
+        session = requests.Session()
+        response = None
+        for redirect_count in range(max_redirects + 1):
+            safe_current = validate_url(current_url)
+            if not safe_current.ok:
+                result["error"] = f"URL safety check failed: {safe_current.reason}"
+                return result
+
+            response = session.get(
+                safe_current.normalized_url,
+                headers=DEFAULT_HEADERS,
+                timeout=timeout,
+                allow_redirects=False,
+            )
+
+            if not follow_redirects or not response.is_redirect:
+                break
+
+            location = response.headers.get("Location")
+            if not location:
+                break
+            result["redirect_chain"].append(response.url)
+            current_url = urljoin(response.url, location)
+            if redirect_count == max_redirects:
+                result["error"] = f"Too many redirects (max {max_redirects})"
+                return result
+
+        if response is None:
+            result["error"] = "No response returned"
+            return result
+
+        result["url"] = response.url
+        result["status_code"] = response.status_code
+        result["content"] = _body_text(response)
+        result["headers"] = dict(response.headers)
+
+        if render == "always" or (render == "auto" and should_render(result["content"])):
+            rendered = render_url(response.url, timeout=timeout)
+            if rendered.error:
+                # "auto" means render if possible: keep the static response
+                # rather than discarding a good 200 because the browser is missing.
+                if render == "auto":
+                    result["render_error"] = rendered.error
+                    return result
+                result["error"] = rendered.error
+                return result
+            result["url"] = rendered.final_url
+            result["status_code"] = rendered.status_code
+            result["content"] = rendered.html
+            result["headers"] = rendered.headers
+            result["rendered"] = True
+
+    except requests.exceptions.Timeout:
+        result["error"] = f"Request timed out after {timeout} seconds"
+    except requests.exceptions.TooManyRedirects:
+        result["error"] = f"Too many redirects (max {max_redirects})"
+    except requests.exceptions.SSLError as e:
+        result["error"] = f"SSL error: {e}"
+    except requests.exceptions.ConnectionError as e:
+        result["error"] = f"Connection error: {e}"
+    except requests.exceptions.RequestException as e:
+        result["error"] = f"Request failed: {e}"
+
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Fetch a web page for SEO analysis")
+    parser.add_argument("url", help="URL to fetch")
+    parser.add_argument("--output", "-o", help="Output file path")
+    parser.add_argument("--timeout", "-t", type=int, default=30, help="Timeout in seconds")
+    parser.add_argument("--no-redirects", action="store_true", help="Don't follow redirects")
+    parser.add_argument(
+        "--render",
+        choices=["never", "auto", "always"],
+        default="never",
+        help="Render JavaScript-heavy pages with Playwright (default: never)",
+    )
+
+    args = parser.parse_args()
+
+    result = fetch_page(
+        args.url,
+        timeout=args.timeout,
+        follow_redirects=not args.no_redirects,
+        render=args.render,
+    )
+
+    if result["error"]:
+        print(f"Error: {result['error']}", file=sys.stderr)
+        sys.exit(1)
+
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(result["content"])
+        print(f"Saved to {args.output}")
+    else:
+        print(result["content"])
+
+    # Print metadata to stderr
+    print(f"\nURL: {result['url']}", file=sys.stderr)
+    print(f"Status: {result['status_code']}", file=sys.stderr)
+    print(f"Rendered: {result['rendered']}", file=sys.stderr)
+    if result["render_error"]:
+        print(f"Warning: {render_fallback_warning(result['render_error'])}", file=sys.stderr)
+    if result["redirect_chain"]:
+        print(f"Redirects: {' -> '.join(result['redirect_chain'])}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

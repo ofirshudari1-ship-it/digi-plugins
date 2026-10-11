@@ -1,0 +1,8 @@
+{
+  "name": "digi-ops-ultimate",
+  "version": "1.0.7",
+  "description": "Routing pack of 13 non-SEO domain routers (content, design, social, ads/measurement, reputation/leads/CRM, dev toolchain, video, docs/office, automation/data, inbox/productivity, Wix, memory, MCP tools) plus an index skill. One entry skill per domain, one winner per capability, no duplicated capability. SEO lives in digi-seo-ultimate.",
+  "author": { "name": "ofirshudari1-ship-it" },
+  "license": "MIT",
+  "keywords": ["router", "consolidation", "hebrew", "rtl", "dev-toolchain"]
+}

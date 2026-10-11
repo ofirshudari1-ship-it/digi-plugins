@@ -1,0 +1,453 @@
+#!/usr/bin/env python3
+"""
+Query GA4 Data API for traffic, landing page, and engagement data (Tier 2 — OAuth2).
+
+Returns sessions, users, engagement rate, bounce rate, and conversions grouped
+by landing page, source/medium, or date.
+
+Credentials (first found wins):
+  - Service account: set GOOGLE_APPLICATION_CREDENTIALS to the JSON path
+  - OAuth token: set GA4_CREDENTIALS to a saved token JSON path
+    (or ga4-oauth-token.json in the skill folder)
+  - The skill's own sign-in: python3 scripts/google_auth.py login --ga4
+
+Usage:
+    python scripts/ga4_report.py --property 123456789 --days 28 --json
+    python scripts/ga4_report.py --property 123456789 --organic-only --json
+    python scripts/ga4_report.py --property 123456789 --ai-referrals --json
+    python scripts/ga4_report.py --property 123456789 --top-landing 20 --json
+    python scripts/ga4_report.py --property 123456789 --metrics sessions,users --json
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+from datetime import date, timedelta
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(SCRIPT_DIR)
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
+
+GA4_SCOPES = ["https://www.googleapis.com/auth/analytics.readonly"]
+
+TIER_UPGRADE_MSG = (
+    "Tier 2 credentials required for GA4 Data API. Sign in once (a browser opens, read-only):\n"
+    "  python3 scripts/google_auth.py setup\n"
+    "  python3 scripts/google_auth.py login --ga4\n"
+    "Advanced: a service account added as a viewer on the GA4 property "
+    "(GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json)."
+)
+
+INSTALL_MSG = (
+    "Install the GA4 Data API client once:\n"
+    "  python3 scripts/google_auth.py setup"
+)
+
+VALID_METRICS = [
+    "sessions", "totalUsers", "newUsers", "activeUsers",
+    "screenPageViews", "engagementRate", "bounceRate",
+    "averageSessionDuration", "conversions", "eventCount",
+]
+
+DEFAULT_METRICS = ["sessions", "totalUsers", "engagementRate", "bounceRate", "screenPageViews"]
+
+# AI assistant hostnames as GA4 records them in sessionSource. ChatGPT also tags
+# many outbound links with utm_source=chatgpt.com, which lands in the same
+# dimension. Clicks with neither a referrer nor a UTM (app clicks, copied links)
+# read as Direct and cannot be recovered here, so these totals are a floor.
+AI_REFERRAL_SOURCES = {
+    "chatgpt.com": "ChatGPT",
+    "chat.openai.com": "ChatGPT",
+    "perplexity.ai": "Perplexity",
+    "claude.ai": "Claude",
+    "gemini.google.com": "Gemini",
+    "copilot.microsoft.com": "Microsoft Copilot",
+    "chat.mistral.ai": "Mistral Le Chat",
+    "chat.deepseek.com": "DeepSeek",
+    "meta.ai": "Meta AI",
+}
+
+# A host or any subdomain of it (www.perplexity.ai), never a lookalike
+# (notchatgpt.com, chatgpt.com.example.net). GA4 evaluates it as RE2.
+AI_REFERRAL_PATTERN = r"^(.+\.)?(" + "|".join(re.escape(h) for h in AI_REFERRAL_SOURCES) + r")$"
+
+AI_REFERRAL_LIMIT = (
+    "Counts only AI clicks that carried a referrer or utm_source. App clicks and copied links "
+    "arrive without either and read as Direct, so treat these numbers as a floor."
+)
+
+
+def ai_engine_for(source: str | None) -> str | None:
+    """Name the AI assistant a GA4 sessionSource belongs to, or None."""
+    host = (source or "").strip().lower()
+    for domain, engine in AI_REFERRAL_SOURCES.items():
+        if host == domain or host.endswith("." + domain):
+            return engine
+    return None
+
+
+def ai_referral_filter_spec() -> dict:
+    """The GA4 dimension filter for AI referrals, as plain values.
+
+    match_type names the Data API StringFilter.MatchType member; the API spells
+    it FULL_REGEXP (not FULL_REGEX).
+    """
+    return {"field_name": "sessionSource", "match_type": "FULL_REGEXP", "value": AI_REFERRAL_PATTERN}
+
+
+def summarize_ai_rows(rows: list[dict]) -> dict:
+    """Tag each row with its AI engine and total sessions per engine."""
+    by_engine = {}
+    for row in rows:
+        engine = ai_engine_for(row.get("sessionSource"))
+        row["ai_engine"] = engine
+        if engine and isinstance(row.get("sessions"), int):
+            by_engine[engine] = by_engine.get(engine, 0) + row["sessions"]
+    return dict(sorted(by_engine.items(), key=lambda kv: -kv[1]))
+
+
+def _load_ga4_client(property_id: str):
+    """Build the GA4 BetaAnalyticsDataClient with available credentials."""
+    try:
+        from google.analytics.data_v1beta import BetaAnalyticsDataClient
+        from google.analytics.data_v1beta.types import (
+            DateRange,
+            Dimension,
+            FilterExpression,
+            Filter,
+            Metric,
+            RunReportRequest,
+        )
+    except ImportError:
+        print(json.dumps({"error": INSTALL_MSG}))
+        sys.exit(1)
+
+    sa_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if sa_path and os.path.isfile(sa_path):
+        try:
+            client = BetaAnalyticsDataClient()
+            return client
+        except Exception as e:
+            print(json.dumps({"error": f"Failed to init GA4 client with service account: {e}"}))
+            sys.exit(1)
+
+    token_path = os.environ.get("GA4_CREDENTIALS")
+    if not token_path:
+        default = os.path.join(REPO_ROOT, "ga4-oauth-token.json")
+        if os.path.isfile(default):
+            token_path = default
+
+    if token_path and os.path.isfile(token_path):
+        try:
+            from google.oauth2.credentials import Credentials
+            creds = Credentials.from_authorized_user_file(token_path, scopes=GA4_SCOPES)
+            if creds.expired and creds.refresh_token:
+                from google.auth.transport.requests import Request
+                creds.refresh(Request())
+            client = BetaAnalyticsDataClient(credentials=creds)
+            return client
+        except Exception as e:
+            print(json.dumps({"error": f"Failed to load GA4 OAuth token: {e}"}))
+            sys.exit(1)
+
+    # The skill's own sign-in (google_auth.py login --ga4), shared with the Search Console scripts.
+    import google_auth
+    if not google_auth.credential_sources("GA4_CREDENTIALS"):
+        print(json.dumps({"error": TIER_UPGRADE_MSG}))
+        sys.exit(1)
+    try:
+        creds = google_auth.load_credentials(GA4_SCOPES, token_env="GA4_CREDENTIALS")[0]
+    except google_auth.AuthError as e:
+        print(json.dumps({"error": str(e)}))
+        sys.exit(1)
+    return BetaAnalyticsDataClient(credentials=creds)
+
+
+def date_window(days: int, end_date: str | None = None, start_date: str | None = None,
+                today: date | None = None) -> tuple[date, date]:
+    """(start, end) of an inclusive window of `days` days; GA4 date ranges count both ends."""
+    end = (today or date.today()) - timedelta(days=1)
+    if end_date:
+        end = date.fromisoformat(end_date)
+    start = end - timedelta(days=days - 1)
+    if start_date:
+        start = date.fromisoformat(start_date)
+    return start, end
+
+
+def run_ga4_report(
+    property_id: str,
+    start_date: str,
+    end_date: str,
+    metrics: list[str],
+    dimensions: list[str],
+    organic_only: bool = False,
+    row_limit: int = 100,
+    ai_referrals: bool = False,
+) -> dict:
+    """
+    Run a GA4 Data API report and return structured results.
+    """
+    try:
+        from google.analytics.data_v1beta.types import (
+            DateRange,
+            Dimension,
+            Filter,
+            FilterExpression,
+            Metric,
+            RunReportRequest,
+        )
+    except ImportError:
+        return {"error": INSTALL_MSG}
+
+    client = _load_ga4_client(property_id)
+    property_path = f"properties/{property_id}"
+
+    request_metrics = [Metric(name=m) for m in metrics]
+    request_dimensions = [Dimension(name=d) for d in dimensions]
+
+    dimension_filter = None
+    if organic_only:
+        dimension_filter = FilterExpression(
+            filter=Filter(
+                field_name="sessionDefaultChannelGroup",
+                string_filter=Filter.StringFilter(
+                    value="Organic Search",
+                    match_type=Filter.StringFilter.MatchType.EXACT,
+                ),
+            )
+        )
+    elif ai_referrals:
+        spec = ai_referral_filter_spec()
+        dimension_filter = FilterExpression(
+            filter=Filter(
+                field_name=spec["field_name"],
+                string_filter=Filter.StringFilter(
+                    value=spec["value"],
+                    match_type=getattr(Filter.StringFilter.MatchType, spec["match_type"]),
+                ),
+            )
+        )
+
+    try:
+        request = RunReportRequest(
+            property=property_path,
+            date_ranges=[DateRange(start_date=start_date, end_date=end_date)],
+            metrics=request_metrics,
+            dimensions=request_dimensions,
+            dimension_filter=dimension_filter,
+            limit=row_limit,
+        )
+        response = client.run_report(request)
+    except Exception as e:
+        return {"error": f"GA4 API error: {e}"}
+
+    rows = []
+    for row in response.rows:
+        entry = {}
+        for i, dim_value in enumerate(row.dimension_values):
+            dim_name = dimensions[i] if i < len(dimensions) else f"dimension_{i}"
+            entry[dim_name] = dim_value.value
+        for i, metric_value in enumerate(row.metric_values):
+            metric_name = metrics[i] if i < len(metrics) else f"metric_{i}"
+            val = metric_value.value
+            try:
+                if "." in val:
+                    entry[metric_name] = round(float(val), 4)
+                else:
+                    entry[metric_name] = int(val)
+            except (ValueError, TypeError):
+                entry[metric_name] = val
+        rows.append(entry)
+
+    totals = {}
+    if response.totals:
+        for i, metric_value in enumerate(response.totals[0].metric_values):
+            metric_name = metrics[i] if i < len(metrics) else f"metric_{i}"
+            val = metric_value.value
+            try:
+                if "." in val:
+                    totals[metric_name] = round(float(val), 4)
+                else:
+                    totals[metric_name] = int(val)
+            except (ValueError, TypeError):
+                totals[metric_name] = val
+
+    result = {
+        "property_id": property_id,
+        "start_date": start_date,
+        "end_date": end_date,
+        "dimensions": dimensions,
+        "metrics": metrics,
+        "organic_only": organic_only,
+        "ai_referrals": ai_referrals,
+        "row_count": len(rows),
+        "rows": rows,
+        "totals": totals,
+    }
+    if ai_referrals:
+        result["sessions_by_ai_engine"] = summarize_ai_rows(rows)
+        result["limits"] = [AI_REFERRAL_LIMIT]
+    return result
+
+
+def print_human(result: dict) -> None:
+    """Print GA4 report results in a human-readable table."""
+    if "error" in result:
+        print(f"Error: {result['error']}")
+        sys.exit(1)
+
+    print(f"GA4 Report — Property {result['property_id']}")
+    print(f"Date range: {result['start_date']} to {result['end_date']}")
+    if result.get("organic_only"):
+        print("Filter: Organic Search only")
+    if result.get("ai_referrals"):
+        print("Filter: AI assistant referrals")
+        for engine, sessions in (result.get("sessions_by_ai_engine") or {}).items():
+            print(f"  {engine}: {sessions:,} sessions")
+        print(f"Note: {AI_REFERRAL_LIMIT}")
+    print("=" * 70)
+
+    rows = result.get("rows", [])
+    if not rows:
+        print("No data returned for this query.")
+        return
+
+    dims = result["dimensions"]
+    metrics = result["metrics"]
+
+    header = f"{'  '.join(d.upper() for d in dims):<40}"
+    for m in metrics[:5]:
+        header += f" {m:>12}"
+    print(header)
+    print("-" * 70)
+
+    for row in rows[:30]:
+        dim_str = "  ".join(str(row.get(d, ""))[:20] for d in dims)
+        line = f"{dim_str:<40}"
+        for m in metrics[:5]:
+            val = row.get(m, "")
+            if isinstance(val, float):
+                if val < 1:
+                    line += f" {val:>11.1%}"
+                else:
+                    line += f" {val:>12.1f}"
+            else:
+                line += f" {val:>12}"
+        print(line)
+
+    if len(rows) > 30:
+        print(f"\n... and {len(rows) - 30} more rows (use --json for full data)")
+
+    totals = result.get("totals", {})
+    if totals:
+        print(f"\nTotals:")
+        for m, v in totals.items():
+            if isinstance(v, float) and v < 1:
+                print(f"  {m}: {v:.1%}")
+            else:
+                print(f"  {m}: {v:,}" if isinstance(v, int) else f"  {m}: {v}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Query GA4 Data API for traffic and engagement data (Tier 2 — OAuth2 required)"
+    )
+    parser.add_argument(
+        "--property", "-p", required=True,
+        help="GA4 property ID (numeric, e.g. 123456789)",
+    )
+    parser.add_argument(
+        "--days", "-d", type=int, default=28,
+        help="Number of days to query, end date included (default: 28)",
+    )
+    parser.add_argument(
+        "--start-date",
+        help="Start date (YYYY-MM-DD). Overrides --days.",
+    )
+    parser.add_argument(
+        "--end-date",
+        help="End date (YYYY-MM-DD). Defaults to yesterday.",
+    )
+    parser.add_argument(
+        "--organic-only", action="store_true",
+        help="Filter to Organic Search traffic only",
+    )
+    parser.add_argument(
+        "--ai-referrals", action="store_true",
+        help="Sessions referred by AI assistants (ChatGPT, Perplexity, Claude, Gemini, Copilot and others), "
+             "grouped by source and landing page. A floor: clicks without a referrer or UTM read as Direct.",
+    )
+    parser.add_argument(
+        "--top-landing", type=int,
+        help="Top N landing pages by sessions",
+    )
+    parser.add_argument(
+        "--dimension",
+        choices=["landingPage", "sessionDefaultChannelGroup", "sessionSourceMedium", "date", "country"],
+        default="landingPage",
+        help="Dimension to group by (default: landingPage)",
+    )
+    parser.add_argument(
+        "--metrics", "-m",
+        help=f"Comma-separated metrics (default: {','.join(DEFAULT_METRICS)}). "
+             f"Available: {', '.join(VALID_METRICS)}",
+    )
+    parser.add_argument(
+        "--limit", type=int, default=100,
+        help="Max rows to return (default: 100)",
+    )
+    parser.add_argument(
+        "--json", "-j", action="store_true",
+        help="Output as JSON",
+    )
+    args = parser.parse_args()
+    if args.ai_referrals and (args.organic_only or args.top_landing):
+        parser.error("--ai-referrals cannot be combined with --organic-only or --top-landing")
+
+    start, end = date_window(args.days, args.end_date, args.start_date)
+
+    metrics = DEFAULT_METRICS
+    if args.metrics:
+        metrics = [m.strip() for m in args.metrics.split(",")]
+        invalid = [m for m in metrics if m not in VALID_METRICS]
+        if invalid:
+            print(f"Error: invalid metrics: {', '.join(invalid)}")
+            print(f"Valid metrics: {', '.join(VALID_METRICS)}")
+            sys.exit(1)
+
+    dimensions = [args.dimension]
+    row_limit = args.limit
+
+    if args.top_landing:
+        dimensions = ["landingPage"]
+        row_limit = args.top_landing
+    if args.ai_referrals:
+        dimensions = ["sessionSource", "landingPage"]
+        if "sessions" not in metrics:
+            metrics = ["sessions"] + metrics
+
+    result = run_ga4_report(
+        property_id=args.property,
+        start_date=start.isoformat(),
+        end_date=end.isoformat(),
+        metrics=metrics,
+        dimensions=dimensions,
+        organic_only=args.organic_only,
+        row_limit=row_limit,
+        ai_referrals=args.ai_referrals,
+    )
+
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print_human(result)
+
+
+if __name__ == "__main__":
+    main()

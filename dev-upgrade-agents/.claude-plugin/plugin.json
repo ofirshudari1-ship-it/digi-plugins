@@ -1,0 +1,8 @@
+{
+  "name": "dev-upgrade-agents",
+  "version": "1.0.0",
+  "description": "Agents and a skill for upgrading existing software end to end: system-upgrader (scan, plan, sprints with commits), upgrade-evaluator (skeptical independent scoring), page-upgrader (single page or module), tool-standards-audit (audit a tool against your standards doc). Includes the system-upgrade skill with a deterministic detector, 10-dimension scoring, and Hebrew RTL, responsive and WCAG 2.2 / IS 5568 references.",
+  "author": { "name": "ofirshudari1-ship-it" },
+  "license": "MIT",
+  "keywords": ["upgrade", "audit", "rtl", "accessibility", "wcag", "ux", "refactor"]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "hebrew-marketing-agents",
+  "version": "1.0.0",
+  "description": "Fourteen generalized digital-marketing agents for Israeli businesses: social media, LinkedIn, paid ads, reputation, CRO, UX/performance/accessibility (IS 5568), Israeli compliance (Privacy Amendment 13), design briefs, email triage, lead operations, cross-channel analytics, competitor watch, directory listings, Wix app audit. Findings and drafts only; business context comes from your project files.",
+  "author": { "name": "ofirshudari1-ship-it" },
+  "license": "MIT",
+  "keywords": ["marketing", "hebrew", "israel", "social-media", "ads", "cro", "accessibility", "compliance", "wix"]
+}

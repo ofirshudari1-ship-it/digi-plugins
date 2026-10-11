@@ -1,0 +1,8 @@
+{
+  "name": "hebrew-copywriter",
+  "version": "1.0.0",
+  "description": "Hebrew copywriting agent and a short style skill for Israeli businesses: web pages, SEO/GEO blog posts, email, WhatsApp, social posts, ads, review replies, FAQ. Plain, persuasive, human-sounding Hebrew with correct RTL handling. Drafts only.",
+  "author": { "name": "ofirshudari1-ship-it" },
+  "license": "MIT",
+  "keywords": ["hebrew", "copywriting", "rtl", "israel", "marketing", "seo"]
+}

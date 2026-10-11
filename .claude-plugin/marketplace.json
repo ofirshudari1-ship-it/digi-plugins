@@ -12,6 +12,21 @@
       "name": "digi-ops-ultimate",
       "source": "./digi-ops-ultimate",
       "description": "Routing pack of 13 non-SEO domain routers plus an index skill: one winner per capability."
+    },
+    {
+      "name": "hebrew-marketing-agents",
+      "source": "./hebrew-marketing-agents",
+      "description": "Fourteen generalized digital-marketing agents for Israeli businesses (social, LinkedIn, ads, reputation, CRO, UX/accessibility, Israeli compliance, design briefs, email, lead ops, analytics, competitor watch, directories, Wix apps). Drafts and findings only."
+    },
+    {
+      "name": "hebrew-copywriter",
+      "source": "./hebrew-copywriter",
+      "description": "Hebrew copywriting agent plus a short style skill with before/after examples: plain, persuasive Hebrew with correct RTL handling, per-channel playbooks. Drafts only."
+    },
+    {
+      "name": "dev-upgrade-agents",
+      "source": "./dev-upgrade-agents",
+      "description": "System-upgrader, upgrade-evaluator, page-upgrader and tool-standards-audit agents plus the system-upgrade skill (detector, 10-dimension scoring, RTL/responsive/WCAG references)."
     }
   ]
 }

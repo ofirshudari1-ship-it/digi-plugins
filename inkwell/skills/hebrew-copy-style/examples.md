@@ -1,76 +1,102 @@
-# דוגמאות סגנון (עסקים בדויים להמחשה בלבד)
+# Style Examples (fictional businesses, for illustration only)
 
-כל השמות, העסקים והמספרים כאן בדויים. במקום מספר אמיתי שהמשתמש לא סיפק משתמשים ב-`[placeholder]`.
+All names, businesses and numbers here are fictional. Where a real figure was not supplied, the copy uses `[placeholder]`. The Hebrew is the actual output style; each pair is followed by an English translation in italics so you can see what changed.
 
-## 1. פתיח עמוד שירות
+## 1. Service page opening
 
-**לפני (נשמע ממוחשב):**
+**Before (sounds machine-written):**
 > בעולם המהיר של היום, חשוב לציין שניהול תורים הוא אתגר מהותי. הפתרון המהפכני שלנו מציע חוויה מדהים ופורצת דרך.
 
-**אחרי:**
+*In today's fast-paced world, it is important to note that appointment management is a substantial challenge. Our revolutionary solution offers an amazing, groundbreaking experience.*
+
+**After:**
 > מקבלים הודעות וואטסאפ מלקוחות באמצע טיפול, ושוכחים לחזור אליהן? המערכת שולחת תזכורת במקומך ומסדרת את התורים ביומן. קבעו שיחת היכרות קצרה.
 
-מה השתנה: שאלה שהקורא שואל את עצמו, פעולה אחת, בלי תארים.
+*Get WhatsApp messages from clients mid-treatment and forget to answer? The system sends a reminder for you and arranges appointments in the calendar. Book a short intro call.*
 
-## 2. הודעת וואטסאפ ללקוח
+**What changed:** a question the reader asks themselves, a single action, no inflated adjectives.
 
-**לפני:**
+## 2. WhatsApp message to a client
+
+**Before:**
 > שלום רב, ברצוננו להודיעך כי חשוב לציין שההצעה שלנו זמינה לעיונך. נשמח לעמוד לרשותך בכל שאלה.
 
-**אחרי:**
+*Dear sir, we wish to inform you that, it is important to note, our offer is available for your review. We would be happy to be at your service for any question.*
+
+**After:**
 > היי דנה, שלחתי לך את ההצעה למייל. יש שאלה על סעיף מסוים? מתי נוח לך לדבר, מחר בבוקר או אחר הצהריים?
 
-מה השתנה: שם, פעולה אחת, 2 משפטים.
+*Hi Dana, I emailed you the offer. A question about a specific clause? When is a good time to talk, tomorrow morning or afternoon?*
 
-## 3. תגובה לביקורת בגוגל (שלילית)
+**What changed:** a name, one action, two sentences.
 
-**לפני:**
+## 3. Reply to a negative Google review
+
+**Before:**
 > תודה על הביקורת! אנחנו מצטערים אם הייתה חוויה לא נעימה. מזמינים אותך לבקר שוב ולנצל הנחה של [אחוז].
 
-**אחרי:**
+*Thanks for the review! We are sorry if the experience was unpleasant. We invite you to visit again and use a [percent] discount.*
+
+**After:**
 > שלום יוסי, תודה ששיתפת. אכן חיכית יותר מהזמן שהובטח לך, וזה לא הסטנדרט שלנו. נשמח להבין מה קרה: אפשר לפנות אלינו בטלפון [מספר] ונטפל בזה.
 
-מה השתנה: התייחסות לפרט האמיתי מהביקורת, בלי התגוננות, בלי הנחה (הביקורת לא במה שיווקית).
+*Hello Yossi, thanks for sharing. You did wait longer than promised, and that is not our standard. We would like to understand what happened: call us on [number] and we will handle it.*
 
-## 4. מודעה ממומנת
+**What changed:** it addresses the real detail from the review, with no defensiveness and no discount (a review reply is not a sales stage).
 
-**לפני:**
+## 4. Paid ad
+
+**Before:**
 > !!! מבצע לזמן מוגבל !!! הפתרון הטוב ביותר בישראל לכל עסק. לחצו עכשיו!!!
 
-**אחרי (כותרת עד מגבלת הפלטפורמה):**
+*!!! Limited-time sale !!! The best solution in Israel for every business. Click now!!!*
+
+**After (headline kept within the platform limit):**
 > כותרת: תזכורות אוטומטיות ללקוחות בוואטסאפ
 > תיאור: פחות שיחות החמצה, יותר תורים מלאים. הצעת מחיר בשיחה קצרה.
 > CTA: קבלו הצעת מחיר
 
-מה השתנה: יתרון מרכזי בכותרת, אין קאפסלוק, אין מבצע מומצא, אין הבטחה.
+*Headline: automatic WhatsApp reminders for clients. Description: fewer missed calls, fuller calendars. A quote in a short call. CTA: get a quote.*
 
-## 5. שאלה ותשובה (FAQ)
+**What changed:** the main benefit in the headline, no all-caps, no invented sale, no unprovable promise.
 
-**לפני:**
+## 5. Question and answer (FAQ)
+
+**Before:**
 > שאלה: האם השאלה הזו נפוצה? תשובה: השאלה הזו מעניינת מאוד. בקצרה, התהליך משתנה.
 
-**אחרי:**
+*Q: Is this question common? A: This is a very interesting question. In short, the process varies.*
+
+**After:**
 > שאלה: כמה זמן לוקח להקים מערכת תורים לעסק קטן?
 > תשובה: בדרך כלל [X ימי עבודה] מרגע שקיבלנו את פרטי העסק. ההקמה כוללת חיבור ליומן והגדרת תזכורות.
 
-מה השתנה: תשובה ישירה במשפט הראשון, placeholder במקום זמן מומצא.
+*Q: How long does it take to set up an appointment system for a small business? A: Usually [X working days] from receiving the business details. Setup includes calendar connection and reminder configuration.*
 
-## 6. טקסט מעורב עברית-לועזית
+**What changed:** a direct answer in the first sentence, and a placeholder instead of an invented timeframe.
 
-**שבור:** `המערכת (CRM) - מחוברת ל-WhatsApp — וגם ל-Gmail.`
-**תקין:** `המערכת מחוברת ל-WhatsApp ול-Gmail, וכוללת ניהול לקוחות (CRM).`
+## 6. Mixed Hebrew and foreign-language text
 
-מה השתנה: בלי מקף ארוך, הסוגריים נפתחים בעברית, בלי פיסוק לועזי שגורם לקפיצת כיוון.
+**Broken:** `המערכת (CRM) - מחוברת ל-WhatsApp — וגם ל-Gmail.`
+**Correct:** `המערכת מחוברת ל-WhatsApp ול-Gmail, וכוללת ניהול לקוחות (CRM).`
 
-## 7. פוסט לינקדאין
+*English: "The system is connected to WhatsApp and Gmail, and includes customer management (CRM)."*
 
-**לפני:**
+**What changed:** no long dash, the parentheses open in Hebrew order, no foreign punctuation that makes the text direction jump.
+
+## 7. LinkedIn post
+
+**Before:**
 > אנחנו שמחים להודיע על שירות חדש! לחצו כאן: [קישור]
 
-**אחרי:**
+*We are happy to announce a new service! Click here: [link]*
+
+**After:**
 > טעות שראיתי השבוע אצל שלושה בעלי עסקים: כל ליד חדש מגיע לתיבת מייל משותפת, ואף אחד לא יודע מי אחראי עליו.
 > [2-3 משפטים על מה שעובד בפועל]
 > איך אצלכם מחליטים מי חוזר ללקוח?
 > (הקישור בתגובה הראשונה)
 
-מה השתנה: 210 התווים הראשונים עומדים לבד, שאלה אמיתית, קישור מחוץ לגוף.
+*A mistake I saw this week at three business owners: every new lead lands in a shared inbox and nobody knows who owns it. [2-3 sentences on what works in practice] How do you decide who calls the client back? (Link in the first comment)*
+
+**What changed:** the first 210 characters stand on their own, a genuine question, and the link sits outside the post body.

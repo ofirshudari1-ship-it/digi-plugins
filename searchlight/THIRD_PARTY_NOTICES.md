@@ -5,7 +5,7 @@ notices are preserved here; the upstream author names also remain in the metadat
 
 | Source | Version | Author | License | What was taken |
 |---|---|---|---|---|
-| claude-seo | 2.4.2 | AgriciDaniel (https://github.com/AgriciDaniel/claude-seo) | MIT, Copyright (c) 2026 agricidaniel | Sub-skills cluster, sxo, agentic, content-brief, competitor-pages, backlinks (adapted); `scripts/ext/*` (adapted import shim); `references/free-backlink-sources.md`, `references/local-extra/*`; agent role definitions (rewritten) |
+| claude-seo | 2.4.2 | AgriciDaniel (https://github.com/AgriciDaniel/claude-seo) | MIT, Copyright (c) 2026 agricidaniel | Sub-skills cluster, sxo, agentic, content-brief, competitor-pages, backlinks (adapted); `scripts/ext/*` (adapted import shim); `references/free-backlink-sources.md`, `references/local-extra/*`; agent role definitions (rewritten); 2.5.0 guides for hreflang, ecommerce, flow, image-gen, dataforseo, maps, drift, google as `references/claude-seo/*` (copied unchanged) |
 | ultimate-seo-geo | 1.22.1 | Myk Pono (https://github.com/mykpono/ultimate-seo-geo) | MIT (declared in plugin.json and README of upstream; no LICENSE file shipped in the package) | `scripts/*.py` (unchanged), `references/**` (unchanged), routing table of the router skill (rewritten) |
 
 | geo-seo-claude | commit 989cae0 | Zubair Trabzada (https://github.com/zubair-trabzada/geo-seo-claude) | MIT, Copyright (c) 2026 Zubair Trabzada | Ideas of `geo-platform-optimizer` and `geo-brand-mentions`, rewritten into `skills/dso-ai-platforms` |

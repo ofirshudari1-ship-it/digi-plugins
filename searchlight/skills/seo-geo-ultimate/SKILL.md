@@ -104,3 +104,18 @@ Specialist agents bundled here (analysis only, parallelizable, see `references/p
 Return a table, not prose: `ID | Severity | Page/URL | Evidence (number + source) | Fix | Owner | Verify-live | Confidence`.
 Close with: done / proposed / blocked (and why) / manual-only, then the next three actions ranked by impact over effort.
 Missing data is an open question, never a finding. Never invent metrics, volumes, prices or client numbers.
+
+## 6. Also absorbed from claude-seo 2.5.0 (2.5.0)
+
+Only what the sections above do not already cover. Open one guide when the request matches; guides sit at `references/claude-seo/skills/<name>/GUIDE.md`, their agent prompts at `references/claude-seo/agents/<name>.md`, and the extra scripts they call at `references/claude-seo/scripts/` (scripts shared with this plugin stay under `scripts/`). Paid or keyed sources (DataForSEO, Google APIs, image generation) need the user's own credentials: if missing, report `blocked`, do not improvise.
+
+| The request says | Open |
+|---|---|
+| hreflang, multi-language, i18n SEO | `seo-hreflang` |
+| product pages, Shopping, e-commerce SEO | `seo-ecommerce` |
+| FLOW prompts, prompt library for SEO work | `seo-flow` |
+| OG/social preview images, image plan (paid generation) | `seo-image-gen` |
+| live SERP/keyword data through DataForSEO | `seo-dataforseo` |
+| Google Maps ranking, geo-grid, GBP audit | `seo-maps` |
+| baseline and regression compare of SEO elements | `seo-drift` |
+| CrUX, GSC and GA4 enrichment of an audit | `seo-google` |

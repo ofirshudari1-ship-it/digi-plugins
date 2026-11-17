@@ -2400,10 +2400,17 @@ def generate_report(report_type, data, domain, output_dir, output_format="pdf"):
         pdf_path = output_dir / f"{base_name}.pdf"
         try:
             def _fetch(url, *a, **k):
-                # shortcut: only local chart PNGs are allowed; blocks file:// and network fetches from injected HTML
+                # allow only data: URIs and files inside charts/; everything else (http, ftp, other file paths) is rejected
+                from urllib.parse import urlsplit
+                from urllib.request import url2pathname
                 from weasyprint import default_url_fetcher
-                if url.startswith("data:") or Path(url.replace("file:///", "")).resolve().is_relative_to((output_dir / "charts").resolve()):
+                u = urlsplit(url)
+                if u.scheme == "data":
                     return default_url_fetcher(url, *a, **k)
+                if u.scheme == "file" and u.netloc in ("", "localhost"):
+                    f = Path(url2pathname(u.path)).resolve()
+                    if f.is_relative_to((output_dir / "charts").resolve()):
+                        return default_url_fetcher(f.as_uri(), *a, **k)
                 raise ValueError("blocked url: " + url)
             HTML(string=html_content, url_fetcher=_fetch).write_pdf(str(pdf_path))
             result["files"].append(str(pdf_path))

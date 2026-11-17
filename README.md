@@ -2,53 +2,43 @@
 
 # Claude Code Plugin Atelier
 
-A marketplace of five Claude Code plugins for SEO, marketing, copywriting, operations routing and software upgrades. Every plugin is draft-and-findings oriented: nothing is sent, published, deleted or paid for without your approval. No private connector is required.
+**Five free plugins that give Claude Code ready-made experts for SEO, marketing, Hebrew writing, tool routing and software upgrades.** Built for small businesses and freelancers, tested on real Israeli sites. MIT licensed.
+
+[עברית](README.he.md)
+
+## Why install
+| Without a plugin | With it |
+|---|---|
+| You write a long prompt every time ("audit my site, check schema, check AI crawlers...") | One sentence. The plugin already knows the checklist |
+| Claude guesses which tool to use | A router picks one tool per job |
+| Hebrew copy sounds like a translation | A style guide for natural, RTL-safe Hebrew |
+| An agent might publish or send things | Everything is **draft and findings only**. Nothing is sent, posted, deleted or paid for without your approval |
+
+No account, no API key and no private connector is required to start. Optional connectors make results richer (see each table).
 
 ## The plugins
-
-| Logo | Plugin | What it does | Typical prompt |
+| Plugin | What it does in plain words | Works with (optional) | Try saying |
 |---|---|---|---|
-| <img src="searchlight/assets/logo.svg" width="48"> | **[Searchlight](searchlight/README.md)** | Unified SEO + GEO/AEO toolkit: one router skill, a lead agent, six specialist agents (technical, content, links, local, data, GEO/schema), audit scripts, 26 procedures. Findings and drafts only. | "Audit example.com and rank the fixes by severity" |
-| <img src="dispatch-desk/assets/logo.svg" width="48"> | **[Dispatch Desk](dispatch-desk/README.md)** | 13 domain routers (content, design, social, ads, reputation, dev toolchain, video, docs, automation, inbox, Wix, memory, MCP tools) plus an index. One winner per capability, so Claude picks the right tool first time. | "Which tool should handle a weekly report?" |
-| <img src="shuk-crew/assets/logo.svg" width="48"> | **[Shuk Crew](shuk-crew/README.md)** | 14 marketing agents for Israeli businesses: social, LinkedIn, ads, reputation, CRO, UX and accessibility (IS 5568), privacy compliance, design briefs, email, lead ops, analytics, competitor watch, directories, Wix apps. | "Run the reputation agent on our Google reviews" |
-| <img src="inkwell/assets/logo.svg" width="48"> | **[Inkwell](inkwell/README.md)** | Hebrew copywriting agent with a style skill and before/after examples. Plain, persuasive, human-sounding Hebrew with correct RTL handling. | "Write a landing page headline set in Hebrew" |
-| <img src="forge/assets/logo.svg" width="48"> | **[Forge](forge/README.md)** | Upgrade agents: system-upgrader, upgrade-evaluator, page-upgrader and tool-standards-audit, plus the `system-upgrade` skill (detector script, 10-dimension scoring, RTL, responsive and WCAG references). | "Upgrade this Electron app end to end" |
+| **[Searchlight](searchlight/README.md)** | Checks why a site does not rank on Google or show up in ChatGPT, Gemini and Perplexity, and lists fixes by severity. One lead agent and six specialists: technical, content, links, local, data, AI/schema | Google Search Console, GA4, Lighthouse, PageSpeed, Ahrefs, Semrush, Wix | "Audit example.com and rank the fixes by severity" |
+| **[Dispatch Desk](dispatch-desk/README.md)** | A switchboard. Tells Claude which tool or skill should handle a job (content, design, social, ads, reviews, video, documents, automation, email, Wix) | Make, Zapier, Canva, Figma, Gmail, WhatsApp, Wix, Composio | "Which tool should handle a weekly report?" |
+| **[Shuk Crew](shuk-crew/README.md)** | 14 marketing helpers for Israeli businesses: social posts, LinkedIn, ads, review replies, conversion, accessibility (IS 5568), privacy law (Amendment 13), leads, email triage, competitors, directories | Facebook, Instagram, LinkedIn, Google Business Profile, GA4, Gmail, Make, Wix | "Run the reputation agent on our Google reviews" |
+| **[Inkwell](inkwell/README.md)** | Writes Hebrew that sounds human: landing pages, blog posts, emails, WhatsApp, ads, review replies. Avoids AI-sounding filler | WhatsApp, Gmail, social networks (drafts only) | "Write a landing page headline set in Hebrew" |
+| **[Forge](forge/README.md)** | Upgrades an existing app or page: scans it, plans sprints, fixes RTL, mobile, accessibility and speed, then a second agent scores the result skeptically | Playwright, Lighthouse | "Upgrade this Electron app end to end" |
 
-## Install
-
+## Install (2 minutes)
 ```bash
 claude plugin marketplace add ofirshudari1-ship-it/digi-plugins
 ```
-
-Then install only what you need:
-
 ```bash
 claude plugin install searchlight@digi-plugins
-claude plugin install dispatch-desk@digi-plugins
-claude plugin install shuk-crew@digi-plugins
-claude plugin install inkwell@digi-plugins
-claude plugin install forge@digi-plugins
 ```
+Replace `searchlight` with `dispatch-desk`, `shuk-crew`, `inkwell` or `forge`.
 
-## How it works
-
-1. **Skills** load into your current chat when you type `/name` or your request matches their trigger.
-2. **Agents** are delegated sub-sessions with their own tools. They work alone and return a report.
-3. **Routers** (Dispatch Desk, Searchlight) decide which skill or agent should take a task, so overlap never happens.
-4. Business context is never baked in. Agents read it from your own `CLAUDE.md` or a brand/config file.
-
-Shuk Crew hands copy to Inkwell when both are installed. SEO and GEO work belongs to Searchlight only.
-
-## Previous names
-
-| Old name | New name |
-|---|---|
-| digi-seo-ultimate | searchlight |
-| digi-ops-ultimate | dispatch-desk |
-| hebrew-marketing-agents | shuk-crew |
-| hebrew-copywriter | inkwell |
-| dev-upgrade-agents | forge |
+## Good to know
+- **Plugins** bundle skills, agents and scripts. **Skills** are step-by-step playbooks Claude follows. **Agents** are helpers that work on their own and send back a report.
+- Safe by design: read-only by default, approval before any outward action.
+- Findings are only as good as the data. If a source (for example Search Console) is not connected, the plugin says so and does not invent numbers.
+- Found a problem or want a feature? Open an issue.
 
 ## License
-
-MIT
+MIT. Free for personal and commercial use.

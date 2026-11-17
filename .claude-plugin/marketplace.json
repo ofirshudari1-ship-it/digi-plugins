@@ -4,28 +4,28 @@
   "owner": { "name": "ofirshudari1-ship-it" },
   "plugins": [
     {
-      "name": "digi-seo-ultimate",
-      "source": "./digi-seo-ultimate",
+      "name": "searchlight",
+      "source": "./searchlight",
       "description": "Unified SEO + GEO/AEO capability plugin (audit scripts, procedures, Hebrew/Wix/monitoring skills). Findings and drafts only."
     },
     {
-      "name": "digi-ops-ultimate",
-      "source": "./digi-ops-ultimate",
+      "name": "dispatch-desk",
+      "source": "./dispatch-desk",
       "description": "Routing pack of 13 non-SEO domain routers plus an index skill: one winner per capability."
     },
     {
-      "name": "hebrew-marketing-agents",
-      "source": "./hebrew-marketing-agents",
+      "name": "shuk-crew",
+      "source": "./shuk-crew",
       "description": "Fourteen generalized digital-marketing agents for Israeli businesses (social, LinkedIn, ads, reputation, CRO, UX/accessibility, Israeli compliance, design briefs, email, lead ops, analytics, competitor watch, directories, Wix apps). Drafts and findings only."
     },
     {
-      "name": "hebrew-copywriter",
-      "source": "./hebrew-copywriter",
+      "name": "inkwell",
+      "source": "./inkwell",
       "description": "Hebrew copywriting agent plus a short style skill with before/after examples: plain, persuasive Hebrew with correct RTL handling, per-channel playbooks. Drafts only."
     },
     {
-      "name": "dev-upgrade-agents",
-      "source": "./dev-upgrade-agents",
+      "name": "forge",
+      "source": "./forge",
       "description": "System-upgrader, upgrade-evaluator, page-upgrader and tool-standards-audit agents plus the system-upgrade skill (detector, 10-dimension scoring, RTL/responsive/WCAG references)."
     }
   ]

@@ -1392,7 +1392,7 @@ def _build_cwv_section(psi_data, crux_data, chart_paths, history_data=None, sect
             if s is not None:
                 cls = "status-pass" if s >= 90 else ("status-warn" if s >= 50 else "status-fail")
                 rating = "Good" if s >= 90 else ("Needs Work" if s >= 50 else "Poor")
-                lines.append(f'      <tr><td>{label}</td><td class="{cls}">{s}</td><td>{rating}</td></tr>')
+                lines.append(f'      <tr><td>{escape(str(label))}</td><td class="{cls}">{s}</td><td>{escape(str(rating))}</td></tr>')
         lines.append('    </tbody>')
         lines.append('  </table>')
         lines.append('')
@@ -1432,7 +1432,7 @@ def _build_cwv_section(psi_data, crux_data, chart_paths, history_data=None, sect
                    else ("status-warn" if score_val and score_val >= 0.5 else "status-fail"))
             label = metric_labels.get(k, k.replace("-", " ").title())
             threshold = thresholds.get(k, "n/a")
-            lines.append(f'      <tr><td>{label}</td><td>{v.get("display", "")}</td>'
+            lines.append(f'      <tr><td>{escape(str(label))}</td><td>{escape(str(v.get("display", "")))}</td>'
                          f'<td class="{cls}">{score_pct}</td><td>{threshold}</td></tr>')
         lines.append('    </tbody>')
         lines.append('  </table>')
@@ -1467,7 +1467,7 @@ def _build_cwv_section(psi_data, crux_data, chart_paths, history_data=None, sect
             p75 = m.get("p75", "?")
             display_val = f"{p75:.3f}" if name == "cumulative_layout_shift" else f"{p75}{unit}"
             cls = _rating_css_class(rating)
-            lines.append(f'      <tr><td>{m.get("label", name)}</td><td>{display_val}</td>')
+            lines.append(f'      <tr><td>{escape(str(m.get("label", name)))}</td><td>{display_val}</td>')
             lines.append(f'      <td class="{cls}">{rating.upper()}</td>')
             lines.append(f'      <td>{dist.get("good", "N/A")}%</td>'
                          f'<td>{dist.get("needs_improvement", "N/A")}%</td>'
@@ -1510,7 +1510,7 @@ def _build_cwv_section(psi_data, crux_data, chart_paths, history_data=None, sect
                 direction = t.get("direction", "?")
                 cls = ("status-pass" if direction == "improving"
                        else ("status-fail" if direction == "degrading" else ""))
-                lines.append(f'      <tr><td>{t.get("label", name)}</td>'
+                lines.append(f'      <tr><td>{escape(str(t.get("label", name)))}</td>'
                              f'<td class="{cls}">{direction.upper()}</td>')
                 lines.append(f'      <td>{t.get("change_pct", 0):+.1f}%</td>'
                              f'<td>{t.get("earliest_avg", "?")}</td>'
@@ -1531,9 +1531,9 @@ def _build_cwv_section(psi_data, crux_data, chart_paths, history_data=None, sect
         lines.append('    <tbody>')
         for a in failed[:20]:
             score_pct = f"{a['score']:.0%}" if a.get("score") is not None else "?"
-            lines.append(f'      <tr><td>{a.get("title", "")}</td>'
+            lines.append(f'      <tr><td>{escape(str(a.get("title", "")))}</td>'
                          f'<td class="status-fail">{score_pct}</td>'
-                         f'<td>{a.get("display", "")}</td></tr>')
+                         f'<td>{escape(str(a.get("display", "")))}</td></tr>')
         lines.append('    </tbody>')
         lines.append('  </table>')
         lines.append('')
@@ -1563,7 +1563,7 @@ def _build_cwv_section(psi_data, crux_data, chart_paths, history_data=None, sect
         lines.append('    </thead>')
         lines.append('    <tbody>')
         for a in a11y:
-            lines.append(f'      <tr><td>{a.get("title", "")}</td>'
+            lines.append(f'      <tr><td>{escape(str(a.get("title", "")))}</td>'
                          f'<td class="status-fail">{a.get("score", 0):.0%}</td></tr>')
         lines.append('    </tbody>')
         lines.append('  </table>')
@@ -1579,7 +1579,7 @@ def _build_cwv_section(psi_data, crux_data, chart_paths, history_data=None, sect
         lines.append('    </thead>')
         lines.append('    <tbody>')
         for o in opps:
-            lines.append(f'      <tr><td>{o.get("title", "")}</td>'
+            lines.append(f'      <tr><td>{escape(str(o.get("title", "")))}</td>'
                          f'<td>{o.get("savings_ms", 0)}ms</td></tr>')
         lines.append('    </tbody>')
         lines.append('  </table>')
@@ -1666,7 +1666,7 @@ def _build_gsc_section(gsc_data, chart_paths, section_num=3, fig_start=1):
             pos = r.get("position", 0)
             pos_cls = ("status-pass" if pos <= 3
                        else ("status-warn" if pos <= 10 else "status-fail"))
-            lines.append(f'      <tr><td>{i}</td><td>{query}</td>'
+            lines.append(f'      <tr><td>{i}</td><td>{escape(str(query))}</td>'
                          f'<td>{r.get("clicks", 0)}</td>'
                          f'<td>{r.get("impressions", 0):,}</td>')
             lines.append(f'      <td>{r.get("ctr", 0)}%</td>'
@@ -1709,7 +1709,7 @@ def _build_gsc_section(gsc_data, chart_paths, section_num=3, fig_start=1):
         lines.append('    <tbody>')
         for w in qw:
             query = w.get("keys", ["?"])[0] if w.get("keys") else w.get("query", "?")
-            lines.append(f'      <tr><td>{query}</td>'
+            lines.append(f'      <tr><td>{escape(str(query))}</td>'
                          f'<td>{w.get("position", 0):.1f}</td>'
                          f'<td>{w.get("impressions", 0):,}</td>'
                          f'<td>{w.get("clicks", 0)}</td></tr>')
@@ -1800,7 +1800,7 @@ def _build_indexation_section(inspect_data, chart_paths, section_num=4, fig_star
             lines.append(f'      <tr><td style="word-break:break-all;font-size:8pt;">'
                          f'{url_display}</td>')
             lines.append(f'      <td class="{cls}">{verdict}</td>'
-                         f'<td>{cov}</td><td>{crawl}</td></tr>')
+                         f'<td>{escape(str(cov))}</td><td>{escape(str(crawl))}</td></tr>')
         lines.append('    </tbody>')
         lines.append('  </table>')
         lines.append('')
@@ -1817,7 +1817,7 @@ def _build_indexation_section(inspect_data, chart_paths, section_num=4, fig_star
         for rr in rich:
             lines.append(f'      <tr><td style="word-break:break-all;font-size:8pt;">'
                          f'{rr.get("url", "?")}</td>'
-                         f'<td>{rr.get("type", "?")}</td></tr>')
+                         f'<td>{escape(str(rr.get("type", "?")))}</td></tr>')
         lines.append('    </tbody>')
         lines.append('  </table>')
         lines.append('')
@@ -2399,7 +2399,13 @@ def generate_report(report_type, data, domain, output_dir, output_format="pdf"):
             return result
         pdf_path = output_dir / f"{base_name}.pdf"
         try:
-            HTML(string=html_content).write_pdf(str(pdf_path))
+            def _fetch(url, *a, **k):
+                # shortcut: only local chart PNGs are allowed; blocks file:// and network fetches from injected HTML
+                from weasyprint import default_url_fetcher
+                if url.startswith("data:") or Path(url.replace("file:///", "")).resolve().is_relative_to((output_dir / "charts").resolve()):
+                    return default_url_fetcher(url, *a, **k)
+                raise ValueError("blocked url: " + url)
+            HTML(string=html_content, url_fetcher=_fetch).write_pdf(str(pdf_path))
             result["files"].append(str(pdf_path))
             # Post-generation review
             review = _review_pdf(str(pdf_path), html_content)

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 570" width="1000" height="570" role="img" aria-label="Inkwell card">
+<rect width="1000" height="570" rx="28" fill="#10243E"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" x="40" y="34" width="120" height="120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0D4F4A"/><stop offset="1" stop-color="#26A69A"/></linearGradient></defs><rect width="120" height="120" rx="26" fill="url(#g)"/><path d="M35 85 L45 55 L85 25 L95 35 L65 75 Z" fill="#fff"/><path d="M35 85 L45 55 L55 65 Z" fill="#FFB74D"/><path d="M22 92 H98" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>
+<text x="188" y="62" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#FFB74D">PLUGIN · 1 AGENT + 1 SKILL</text>
+<text x="188" y="106" font-family="Segoe UI,Arial,sans-serif" font-size="44" font-weight="800" fill="#fff">Inkwell</text>
+<text x="188" y="138" font-family="Segoe UI,Arial,sans-serif" font-size="20" fill="#C9D6E6">Writes Hebrew that sounds like a person wrote it: pages,</text>
+<text x="188" y="164" font-family="Segoe UI,Arial,sans-serif" font-size="20" fill="#C9D6E6">emails, WhatsApp, ads, review replies.</text>
+<rect x="790" y="34" width="170" height="40" rx="20" fill="#2EA44F"/><text x="875" y="60" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="800" fill="#fff">100% FREE</text>
+<text x="40" y="200" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#FFB74D">HOW IT WORKS</text>
+<rect x="40" y="214" width="293" height="165" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="76" cy="250" r="19" fill="#0B3A6F"/><text x="76" y="257" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="800" fill="#fff">1</text>
+<text x="62" y="292" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">Say what you need and for</text>
+<text x="62" y="316" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">whom: a page, an email, an</text>
+<text x="62" y="340" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">ad.</text>
+<text x="343.0" y="304" text-anchor="middle" font-size="16" fill="#FFB74D">&#9654;</text>
+<rect x="353" y="214" width="293" height="165" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="389" cy="250" r="19" fill="#0B3A6F"/><text x="389" y="257" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="800" fill="#fff">2</text>
+<text x="375" y="292" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">The agent writes answer-</text>
+<text x="375" y="316" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">first copy, safe</text>
+<text x="375" y="340" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">punctuation for right-to-</text>
+<text x="375" y="364" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">left, no AI filler.</text>
+<text x="656.0" y="304" text-anchor="middle" font-size="16" fill="#FFB74D">&#9654;</text>
+<rect x="666" y="214" width="293" height="165" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="702" cy="250" r="19" fill="#0B3A6F"/><text x="702" y="257" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="800" fill="#fff">3</text>
+<text x="688" y="292" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">You get copy-ready text.</text>
+<text x="688" y="316" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">Nothing is sent or</text>
+<text x="688" y="340" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">published.</text>
+<text x="40" y="410" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#FFB74D">WORKS WITH (all optional)</text>
+<rect x="40" y="422" width="98" height="34" rx="17" fill="#1D3A5E"/><text x="89.0" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">WhatsApp</text>
+<rect x="148" y="422" width="73" height="34" rx="17" fill="#1D3A5E"/><text x="184.5" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">Gmail</text>
+<rect x="231" y="422" width="98" height="34" rx="17" fill="#1D3A5E"/><text x="280.0" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">Facebook</text>
+<rect x="339" y="422" width="107" height="34" rx="17" fill="#1D3A5E"/><text x="392.5" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">Instagram</text>
+<rect x="456" y="422" width="98" height="34" rx="17" fill="#1D3A5E"/><text x="505.0" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">LinkedIn</text>
+<rect x="564" y="422" width="141" height="34" rx="17" fill="#1D3A5E"/><text x="634.5" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">(drafts only)</text>
+<rect x="40" y="512" width="920" height="42" rx="10" fill="#0A1626"/><text x="58" y="539" font-family="Consolas,Menlo,monospace" font-size="15" fill="#7EE787">$ claude plugin install inkwell@digi-plugins</text>
+</svg>

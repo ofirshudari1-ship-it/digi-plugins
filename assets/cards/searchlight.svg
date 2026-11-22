@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 570" width="1000" height="570" role="img" aria-label="Searchlight card">
+<rect width="1000" height="570" rx="28" fill="#10243E"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" x="40" y="34" width="120" height="120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0B3A6F"/><stop offset="1" stop-color="#1E88E5"/></linearGradient></defs><rect width="120" height="120" rx="26" fill="url(#g)"/><circle cx="44" cy="44" r="18" fill="none" stroke="#fff" stroke-width="7"/><path d="M58 58 L78 78" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M44 34 v20 M34 44 h20" stroke="#FFB74D" stroke-width="4" stroke-linecap="round"/></svg>
+<text x="188" y="62" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#FFB74D">PLUGIN · 1 LEAD AGENT + 6 SPECIALISTS</text>
+<text x="188" y="106" font-family="Segoe UI,Arial,sans-serif" font-size="44" font-weight="800" fill="#fff">Searchlight</text>
+<text x="188" y="138" font-family="Segoe UI,Arial,sans-serif" font-size="20" fill="#C9D6E6">Finds out why your site is not showing on Google,</text>
+<text x="188" y="164" font-family="Segoe UI,Arial,sans-serif" font-size="20" fill="#C9D6E6">ChatGPT, Gemini or Perplexity, and lists the fixes.</text>
+<rect x="790" y="34" width="170" height="40" rx="20" fill="#2EA44F"/><text x="875" y="60" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="18" font-weight="800" fill="#fff">100% FREE</text>
+<text x="40" y="200" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#FFB74D">HOW IT WORKS</text>
+<rect x="40" y="214" width="293" height="165" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="76" cy="250" r="19" fill="#0B3A6F"/><text x="76" y="257" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="800" fill="#fff">1</text>
+<text x="62" y="292" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">You give a website address.</text>
+<text x="343.0" y="304" text-anchor="middle" font-size="16" fill="#FFB74D">&#9654;</text>
+<rect x="353" y="214" width="293" height="165" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="389" cy="250" r="19" fill="#0B3A6F"/><text x="389" y="257" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="800" fill="#fff">2</text>
+<text x="375" y="292" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">One lead agent sends six</text>
+<text x="375" y="316" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">specialists: technical,</text>
+<text x="375" y="340" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">content, links, local,</text>
+<text x="375" y="364" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">data, AI/schema.</text>
+<text x="656.0" y="304" text-anchor="middle" font-size="16" fill="#FFB74D">&#9654;</text>
+<rect x="666" y="214" width="293" height="165" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="702" cy="250" r="19" fill="#0B3A6F"/><text x="702" y="257" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="800" fill="#fff">3</text>
+<text x="688" y="292" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">You get a fix list ranked</text>
+<text x="688" y="316" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">by severity. Nothing on</text>
+<text x="688" y="340" font-family="Segoe UI,Arial,sans-serif" font-size="17" fill="#10243E">your site is changed.</text>
+<text x="40" y="410" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#FFB74D">WORKS WITH (all optional)</text>
+<rect x="40" y="422" width="210" height="34" rx="17" fill="#1D3A5E"/><text x="145.0" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">Google Search Console</text>
+<rect x="260" y="422" width="55" height="34" rx="17" fill="#1D3A5E"/><text x="287.5" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">GA4</text>
+<rect x="325" y="422" width="107" height="34" rx="17" fill="#1D3A5E"/><text x="378.5" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">PageSpeed</text>
+<rect x="442" y="422" width="116" height="34" rx="17" fill="#1D3A5E"/><text x="500.0" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">Lighthouse</text>
+<rect x="568" y="422" width="55" height="34" rx="17" fill="#1D3A5E"/><text x="595.5" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">Wix</text>
+<rect x="633" y="422" width="296" height="34" rx="17" fill="#1D3A5E"/><text x="781.0" y="444" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="15" fill="#fff">Ahrefs / Semrush (paid by them)</text>
+<rect x="40" y="512" width="920" height="42" rx="10" fill="#0A1626"/><text x="58" y="539" font-family="Consolas,Menlo,monospace" font-size="15" fill="#7EE787">$ claude plugin install searchlight@digi-plugins</text>
+</svg>

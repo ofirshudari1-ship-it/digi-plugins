@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 250" width="1200" height="250" role="img" aria-label="How every plugin works">
+<rect width="1200" height="250" rx="24" fill="#10243E"/>
+<text x="40" y="48" font-family="Segoe UI,Arial,sans-serif" font-size="22" font-weight="800" fill="#fff">How every plugin works</text>
+<rect x="40" y="72" width="262" height="150" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="74" cy="108" r="18" fill="#0B3A6F"/><text x="74" y="115" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="800" fill="#fff">1</text>
+<text x="102" y="115" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="800" fill="#10243E">You ask</text>
+<text x="60" y="150" font-family="Segoe UI,Arial,sans-serif" font-size="16" fill="#3B4B5F">Describe the job in plain</text>
+<text x="60" y="173" font-family="Segoe UI,Arial,sans-serif" font-size="16" fill="#3B4B5F">words. No long prompt.</text>
+<text x="322.0" y="152" text-anchor="middle" font-size="20" fill="#FFB74D">&#9654;</text>
+<rect x="342" y="72" width="262" height="150" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="376" cy="108" r="18" fill="#0B3A6F"/><text x="376" y="115" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="800" fill="#fff">2</text>
+<text x="404" y="115" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="800" fill="#10243E">Claude picks the expert</text>
+<text x="362" y="150" font-family="Segoe UI,Arial,sans-serif" font-size="16" fill="#3B4B5F">The right plugin, agent or</text>
+<text x="362" y="173" font-family="Segoe UI,Arial,sans-serif" font-size="16" fill="#3B4B5F">skill takes over.</text>
+<text x="624.0" y="152" text-anchor="middle" font-size="20" fill="#FFB74D">&#9654;</text>
+<rect x="644" y="72" width="262" height="150" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="678" cy="108" r="18" fill="#0B3A6F"/><text x="678" y="115" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="800" fill="#fff">3</text>
+<text x="706" y="115" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="800" fill="#10243E">The expert works</text>
+<text x="664" y="150" font-family="Segoe UI,Arial,sans-serif" font-size="16" fill="#3B4B5F">It reads, checks and writes</text>
+<text x="664" y="173" font-family="Segoe UI,Arial,sans-serif" font-size="16" fill="#3B4B5F">drafts or findings.</text>
+<text x="926.0" y="152" text-anchor="middle" font-size="20" fill="#FFB74D">&#9654;</text>
+<rect x="946" y="72" width="262" height="150" rx="18" fill="#fff" opacity=".97"/>
+<circle cx="980" cy="108" r="18" fill="#0B3A6F"/><text x="980" y="115" text-anchor="middle" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="800" fill="#fff">4</text>
+<text x="1008" y="115" font-family="Segoe UI,Arial,sans-serif" font-size="19" font-weight="800" fill="#10243E">You decide</text>
+<text x="966" y="150" font-family="Segoe UI,Arial,sans-serif" font-size="16" fill="#3B4B5F">Nothing is sent, posted,</text>
+<text x="966" y="173" font-family="Segoe UI,Arial,sans-serif" font-size="16" fill="#3B4B5F">deleted or paid without your</text>
+<text x="966" y="196" font-family="Segoe UI,Arial,sans-serif" font-size="16" fill="#3B4B5F">OK.</text>
+</svg>

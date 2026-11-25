@@ -19,9 +19,39 @@
 
 <img src="assets/how-it-works.svg" alt="How every plugin works">
 
-## Install (2 minutes)
+## Install everything in one command
 
-**You need:** [Claude Code](https://claude.com/claude-code) (Anthropic's own app, with its own plan). The plugins themselves cost nothing.
+**You need:** [Claude Code](https://claude.com/claude-code) and [git](https://git-scm.com). Everything here is free.
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/ofirshudari1-ship-it/digi-plugins/main/install-all.ps1 | iex
+```
+
+Mac / Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ofirshudari1-ship-it/digi-plugins/main/install-all.sh | bash
+```
+
+It installs the 5 plugins below **and** the [claude-tools](https://github.com/ofirshudari1-ship-it/claude-tools) set. Then start a new Claude Code session. To update later, run the same command again.
+
+### What you get
+
+| Package | Agents | Skills | Free tools it can connect to (all optional) |
+|---|---|---|---|
+| Searchlight | 7 | 17 | Search Console, GA4, PageSpeed, CrUX, Bing Webmaster, Unlighthouse, Playwright |
+| Dispatch Desk | 0 | 14 | none (it only routes jobs) |
+| Shuk Crew | 14 | 0 | none required; drafts for Gmail, WhatsApp, social, Make |
+| Inkwell | 1 | 1 | none |
+| Forge | 4 | 1 | Playwright, Chrome DevTools |
+| claude-tools | 4 | 6 | none, runs locally |
+| **Total** | **30** | **39** | Setup for the free ones: [SETUP-FREE-TOOLS.md](searchlight/docs/SETUP-FREE-TOOLS.md) |
+
+An **agent** is a specialist Claude can hand a job to. A **skill** is a written procedure Claude follows. No tool here needs a paid account.
+
+## Install one plugin only (2 minutes)
 
 **Step 1.** Add the marketplace (once):
 

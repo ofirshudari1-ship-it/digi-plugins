@@ -21,9 +21,39 @@
 
 <img src="assets/how-it-works.svg" alt="איך כל פלאגין עובד">
 
-## התקנה (2 דקות)
+## התקנה של הכול בפקודה אחת
 
-**מה צריך:** [Claude Code](https://claude.com/claude-code) (האפליקציה של Anthropic, עם התוכנית שלה). הפלאגינים עצמם לא עולים כלום.
+**מה צריך:** [Claude Code](https://claude.com/claude-code) ו-[git](https://git-scm.com). הכול כאן חינם.
+
+ווינדוס (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/ofirshudari1-ship-it/digi-plugins/main/install-all.ps1 | iex
+```
+
+מק / לינוקס:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ofirshudari1-ship-it/digi-plugins/main/install-all.sh | bash
+```
+
+הפקודה מתקינה את 5 הפלאגינים שלמטה **וגם** את ערכת [claude-tools](https://github.com/ofirshudari1-ship-it/claude-tools). אחר כך פותחים סשן חדש של Claude Code. לעדכון בעתיד: מריצים את אותה פקודה שוב.
+
+### מה מקבלים
+
+| חבילה | סוכנים | סקילים | כלים חינמיים שאפשר לחבר (הכול אופציונלי) |
+|---|---|---|---|
+| Searchlight | 7 | 17 | Search Console, GA4, PageSpeed, CrUX, Bing Webmaster, Unlighthouse, Playwright |
+| Dispatch Desk | 0 | 14 | אין (רק מנתב משימות) |
+| Shuk Crew | 14 | 0 | אין חובה; טיוטות ל-Gmail, וואטסאפ, רשתות, Make |
+| Inkwell | 1 | 1 | אין |
+| Forge | 4 | 1 | Playwright, Chrome DevTools |
+| claude-tools | 4 | 6 | אין, רץ מקומית |
+| **סה"כ** | **30** | **39** | הגדרת החינמיים: [SETUP-FREE-TOOLS.md](searchlight/docs/SETUP-FREE-TOOLS.md) |
+
+**סוכן** = מומחה ש-Claude מעביר אליו משימה. **סקיל** = נוהל כתוב ש-Claude עוקב אחריו. אף כלי כאן לא דורש חשבון בתשלום.
+
+## התקנה של פלאגין אחד בלבד (2 דקות)
 
 **שלב 1.** מוסיפים את המאגר (פעם אחת):
 
